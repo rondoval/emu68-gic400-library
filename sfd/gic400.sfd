@@ -1,0 +1,13 @@
+==id $Id: gic400.sfd 1.0.0 $
+* "gic400.library"
+==base _GIC400_Base
+==basetype struct Library *
+==libname gic400.library
+==bias 30
+==public
+==include <exec/types.h>
+==include <exec/interrupts.h>
+ULONG AddIntServerEx(ULONG irq, UBYTE priority, BOOL edge, struct Interrupt *interrupt) (D0,D1,D2,A1)
+ULONG RemIntServerEx(ULONG irq, struct Interrupt *interrupt) (D0, A1)
+ULONG GetIntStatus(ULONG irq, BOOL *pending, BOOL *active, BOOL *enabled) (D0,A1,A2,A3)
+==end
