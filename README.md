@@ -24,7 +24,7 @@
 
 - Kickstart 3.0 (V39) or later.
 - Emu68 firmware with device tree support (tested with Emu68 ≥ 1.0.5.1).
-- Raspberry Pi 4B (the controller map matches the Pi 4 layout).
+- Raspberry Pi 4B (Pi 3 does not have GIC-400 interrupt controller).
 - Bebbo's m68k-amigaos GCC toolchain for building from source.
 
 ## Installing
