@@ -1,11 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 #include <gic400_private.h>
 
-BOOL gicd_irq_valid(struct GIC_Base *gicBase, ULONG irq)
-{
-    return gicBase->max_irqs > 0 && irq < gicBase->max_irqs;
-}
-
 /* gicd_print_info: Log distributor ID and capability registers.
  * Args: none.
  * Returns: void.
@@ -45,97 +40,12 @@ void gicd_disable(struct GIC_Base *gicBase)
     writel(reg, GICD_CTLR);
 }
 
-/* gicd_get_irq_status: Report SPI active status from SPISR.
- * Args: irq - interrupt number.
- * Returns: TRUE when pending in SPISR, otherwise FALSE.
- */
-BOOL gicd_get_irq_status(struct GIC_Base *gicBase, ULONG irq)
-{
-    if (!gicd_irq_valid(gicBase, irq))
-        return FALSE;
-
-    // read SPI status from GICD_SPISR
-    if (irq < 32)
-        return FALSE; // SGI and PPI are not handled here
-
-    ULONG spi_irq = irq - 32;
-    ULONG reg_index = spi_irq >> 5;
-    ULONG bit_offset = spi_irq & 0x1F;
-    ULONG reg = readl(GICD_SPISR(reg_index));
-    return (reg & (1 << bit_offset)) != 0;
-}
-
-/* gicd_is_pending: Check pending bit for an IRQ in ISPENDR.
- * Args: irq - interrupt number.
- * Returns: TRUE when the pending bit is set, otherwise FALSE.
- */
-BOOL gicd_is_pending(struct GIC_Base *gicBase, ULONG irq)
-{
-    if (!gicd_irq_valid(gicBase, irq))
-        return FALSE;
-
-    // read pending status from GICD_ISPENDR
-    ULONG reg_index = irq >> 5;
-    ULONG bit_offset = irq & 0x1F;
-    ULONG reg = readl(GICD_ISPENDR(reg_index));
-    return (reg & (1UL << bit_offset)) != 0;
-}
-
-/* gicd_set_pending: Set pending bit for an IRQ in ISPENDR.
- * Args: irq - interrupt number.
- * Returns: void.
- */
-void gicd_set_pending(struct GIC_Base *gicBase, ULONG irq)
-{
-    if (!gicd_irq_valid(gicBase, irq))
-        return;
-
-    // set pending bit in GICD_ISPENDR
-    ULONG reg_index = irq >> 5;
-    ULONG bit_offset = irq & 0x1F;
-    writel(1UL << bit_offset, GICD_ISPENDR(reg_index));
-}
-
-/* gicd_clear_pending: Clear pending bit for an IRQ in ISPENDR.
- * Args: irq - interrupt number.
- * Returns: void.
- */
-void gicd_clear_pending(struct GIC_Base *gicBase, ULONG irq)
-{
-    if (!gicd_irq_valid(gicBase, irq))
-        return;
-
-    // clear pending bit in GICD_ICPENDR
-    ULONG reg_index = irq >> 5;
-    ULONG bit_offset = irq & 0x1F;
-    writel(1UL << bit_offset, GICD_ICPENDR(reg_index));
-}
-
-/* gicd_is_active: Check active bit for an IRQ in ISACTIVER.
- * Args: irq - interrupt number.
- * Returns: TRUE when the active bit is set, otherwise FALSE.
- */
-BOOL gicd_is_active(struct GIC_Base *gicBase, ULONG irq)
-{
-    if (!gicd_irq_valid(gicBase, irq))
-        return FALSE;
-
-    // read active status from GICD_ISACTIVER
-    ULONG reg_index = irq >> 5;
-    ULONG bit_offset = irq & 0x1F;
-    ULONG reg = readl(GICD_ISACTIVER(reg_index));
-    return (reg & (1UL << bit_offset)) != 0;
-}
-
 /* gicd_is_enabled: Check enable bit for an IRQ in ISENABLER.
  * Args: irq - interrupt number.
  * Returns: TRUE when enabled, otherwise FALSE.
  */
 BOOL gicd_is_enabled(struct GIC_Base *gicBase, ULONG irq)
 {
-    if (!gicd_irq_valid(gicBase, irq))
-        return FALSE;
-
     // read enabled status from GICD_ISENABLER
     ULONG reg_index = irq >> 5;
     ULONG bit_offset = irq & 0x1F;
@@ -149,9 +59,6 @@ BOOL gicd_is_enabled(struct GIC_Base *gicBase, ULONG irq)
  */
 void gicd_enable_irq(struct GIC_Base *gicBase, ULONG irq)
 {
-    if (!gicd_irq_valid(gicBase, irq))
-        return;
-
     // set enable bit in GICD_ISENABLER
     ULONG reg_index = irq >> 5;
     ULONG bit_offset = irq & 0x1F;
@@ -164,13 +71,91 @@ void gicd_enable_irq(struct GIC_Base *gicBase, ULONG irq)
  */
 void gicd_disable_irq(struct GIC_Base *gicBase, ULONG irq)
 {
-    if (!gicd_irq_valid(gicBase, irq))
-        return;
-
     // set disable bit in GICD_ICENABLER
     ULONG reg_index = irq >> 5;
     ULONG bit_offset = irq & 0x1F;
     writel(1UL << bit_offset, GICD_ICENABLER(reg_index));
+}
+
+/* gicd_is_pending: Check pending bit for an IRQ in ISPENDR.
+ * Args: irq - interrupt number.
+ * Returns: TRUE when the pending bit is set, otherwise FALSE.
+ */
+BOOL gicd_is_pending(struct GIC_Base *gicBase, ULONG irq)
+{
+    // read pending status from GICD_ISPENDR
+    ULONG reg_index = irq >> 5;
+    ULONG bit_offset = irq & 0x1F;
+    ULONG reg = readl(GICD_ISPENDR(reg_index));
+    return (reg & (1UL << bit_offset)) != 0;
+}
+
+/* gicd_set_pending: Set pending bit for an IRQ in ISPENDR.
+ * Args: irq - interrupt number.
+ * Returns: void.
+ */
+void gicd_set_pending(struct GIC_Base *gicBase, ULONG irq)
+{
+    // set pending bit in GICD_ISPENDR
+    ULONG reg_index = irq >> 5;
+    ULONG bit_offset = irq & 0x1F;
+    writel(1UL << bit_offset, GICD_ISPENDR(reg_index));
+}
+
+/* gicd_clear_pending: Clear pending bit for an IRQ in ISPENDR.
+ * Args: irq - interrupt number.
+ * Returns: void.
+ */
+void gicd_clear_pending(struct GIC_Base *gicBase, ULONG irq)
+{
+    // clear pending bit in GICD_ICPENDR
+    ULONG reg_index = irq >> 5;
+    ULONG bit_offset = irq & 0x1F;
+    writel(1UL << bit_offset, GICD_ICPENDR(reg_index));
+}
+
+/* gicd_get_irq_status: Report SPI active status from SPISR.
+ * Args: irq - interrupt number.
+ * Returns: TRUE when pending in SPISR, otherwise FALSE.
+ */
+BOOL gicd_get_irq_status(struct GIC_Base *gicBase, ULONG irq)
+{
+    // read SPI status from GICD_SPISR
+    if (irq < 32)
+        return FALSE; // SGI and PPI are not handled here
+
+    ULONG spi_irq = irq - 32;
+    ULONG reg_index = spi_irq >> 5;
+    ULONG bit_offset = spi_irq & 0x1F;
+    ULONG reg = readl(GICD_SPISR(reg_index));
+    return (reg & (1 << bit_offset)) != 0;
+}
+
+/* gicd_is_active: Check active bit for an IRQ in ISACTIVER.
+ * Args: irq - interrupt number.
+ * Returns: TRUE when the active bit is set, otherwise FALSE.
+ */
+BOOL gicd_is_active(struct GIC_Base *gicBase, ULONG irq)
+{
+    // read active status from GICD_ISACTIVER
+    ULONG reg_index = irq >> 5;
+    ULONG bit_offset = irq & 0x1F;
+    ULONG reg = readl(GICD_ISACTIVER(reg_index));
+    return (reg & (1UL << bit_offset)) != 0;
+}
+
+void gicd_set_active(struct GIC_Base *gicBase, ULONG irq)
+{
+    ULONG reg_index = irq >> 5;
+    ULONG bit_offset = irq & 0x1F;
+    writel(1UL << bit_offset, GICD_ISACTIVER(reg_index));
+}
+
+void gicd_clear_active(struct GIC_Base *gicBase, ULONG irq)
+{
+    ULONG reg_index = irq >> 5;
+    ULONG bit_offset = irq & 0x1F;
+    writel(1UL << bit_offset, GICD_ICACTIVER(reg_index));
 }
 
 /* gicd_get_priority: Fetch per-IRQ priority value.
@@ -179,9 +164,6 @@ void gicd_disable_irq(struct GIC_Base *gicBase, ULONG irq)
  */
 UBYTE gicd_get_priority(struct GIC_Base *gicBase, ULONG irq)
 {
-    if (!gicd_irq_valid(gicBase, irq))
-        return 0;
-
     // read priority from GICD_IPRIORITYR
     ULONG reg_index = irq >> 2;
     ULONG byte_offset = irq & 0x03;
@@ -196,9 +178,6 @@ UBYTE gicd_get_priority(struct GIC_Base *gicBase, ULONG irq)
  */
 void gicd_set_priority(struct GIC_Base *gicBase, ULONG irq, UBYTE priority)
 {
-    if (!gicd_irq_valid(gicBase, irq))
-        return;
-
     // write priority to GICD_IPRIORITYR
     ULONG reg_index = irq >> 2;
     ULONG byte_offset = irq & 0x03;
@@ -214,9 +193,6 @@ void gicd_set_priority(struct GIC_Base *gicBase, ULONG irq, UBYTE priority)
  */
 BOOL gicd_is_cpu_enabled(struct GIC_Base *gicBase, ULONG irq, UBYTE cpu)
 {
-    if (!gicd_irq_valid(gicBase, irq) || cpu >= 8)
-        return FALSE;
-
     // read target from GICD_ITARGETSR and check if cpu bit is set
     if (irq < 32)
         return FALSE; // SGI and PPI are not handled here
@@ -228,15 +204,20 @@ BOOL gicd_is_cpu_enabled(struct GIC_Base *gicBase, ULONG irq, UBYTE cpu)
     return (target & (1 << cpu)) != 0;
 }
 
+UBYTE gicd_get_cpu_mask(struct GIC_Base *gicBase, ULONG irq)
+{
+    ULONG reg_index = irq >> 2;
+    ULONG byte_offset = irq & 0x03;
+    ULONG reg = readl(GICD_ITARGETSR(reg_index));
+    return (UBYTE)((reg >> (byte_offset * 8)) & 0xFF);
+}
+
 /* gicd_set_cpu: Set or clear CPU target bit for an IRQ.
  * Args: irq - interrupt number; cpu - CPU index; enable - TRUE to set.
  * Returns: void.
  */
 void gicd_set_cpu(struct GIC_Base *gicBase, ULONG irq, UBYTE cpu, BOOL enable)
 {
-    if (!gicd_irq_valid(gicBase, irq) || cpu >= 8)
-        return;
-
     // write target to GICD_ITARGETSR
     if (irq < 32)
         return; // SGI and PPI are not handled here
@@ -260,9 +241,6 @@ void gicd_set_cpu(struct GIC_Base *gicBase, ULONG irq, UBYTE cpu, BOOL enable)
  */
 void gicd_set_trigger(struct GIC_Base *gicBase, ULONG irq, BOOL edge)
 {
-    if (!gicd_irq_valid(gicBase, irq))
-        return;
-
     // write trigger mode to GICD_ICFGR
     if (irq < 16)
         return; // SGIs have fixed configuration

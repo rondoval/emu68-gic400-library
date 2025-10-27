@@ -16,6 +16,7 @@
 #include <exec/execbase.h>
 #include <exec/types.h>
 #include <exec/interrupts.h>
+#include <libraries/gic400.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -35,6 +36,24 @@ ULONG LibNull(void);
 ULONG AddIntServerEx(ULONG irq, UBYTE priority, BOOL edge, struct Interrupt * interrupt);
 ULONG RemIntServerEx(ULONG irq, struct Interrupt * interrupt);
 ULONG GetIntStatus(ULONG irq, BOOL * pending, BOOL * active, BOOL * enabled);
+ULONG EnableInt(ULONG irq);
+ULONG DisableInt(ULONG irq);
+ULONG SetIntPriority(ULONG irq, UBYTE priority);
+LONG GetIntPriority(ULONG irq);
+ULONG SetIntTriggerEdge(ULONG irq);
+ULONG SetIntTriggerLevel(ULONG irq);
+ULONG RouteIntToCpu(ULONG irq, UBYTE cpu);
+ULONG UnrouteIntFromCpu(ULONG irq, UBYTE cpu);
+LONG QueryIntRoute(ULONG irq);
+ULONG SetIntPending(ULONG irq);
+ULONG ClearIntPending(ULONG irq);
+ULONG SetIntActive(ULONG irq);
+ULONG ClearIntActive(ULONG irq);
+ULONG SetPriorityMask(UBYTE mask);
+LONG GetPriorityMask(void);
+LONG GetRunningPriority(void);
+LONG GetHighestPending(void);
+LONG GetControllerInfo(struct GICInfo * info);
 
 #ifdef __cplusplus
 }

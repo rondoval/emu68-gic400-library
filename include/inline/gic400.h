@@ -51,4 +51,76 @@ typedef ULONG _sfdc_vararg;
       LP4(0x2a, ULONG, GetIntStatus , ULONG, ___irq, d0, BOOL *, ___pending, a1, BOOL *, ___active, a2, BOOL *, ___enabled, a3,\
       , GIC400_BASE_NAME)
 
+#define EnableInt(___irq) \
+      LP1(0x30, ULONG, EnableInt , ULONG, ___irq, d0,\
+      , GIC400_BASE_NAME)
+
+#define DisableInt(___irq) \
+      LP1(0x36, ULONG, DisableInt , ULONG, ___irq, d0,\
+      , GIC400_BASE_NAME)
+
+#define SetIntPriority(___irq, ___priority) \
+      LP2(0x3c, ULONG, SetIntPriority , ULONG, ___irq, d0, UBYTE, ___priority, d1,\
+      , GIC400_BASE_NAME)
+
+#define GetIntPriority(___irq) \
+      LP1(0x42, LONG, GetIntPriority , ULONG, ___irq, d0,\
+      , GIC400_BASE_NAME)
+
+#define SetIntTriggerEdge(___irq) \
+      LP1(0x48, ULONG, SetIntTriggerEdge , ULONG, ___irq, d0,\
+      , GIC400_BASE_NAME)
+
+#define SetIntTriggerLevel(___irq) \
+      LP1(0x4e, ULONG, SetIntTriggerLevel , ULONG, ___irq, d0,\
+      , GIC400_BASE_NAME)
+
+#define RouteIntToCpu(___irq, ___cpu) \
+      LP2(0x54, ULONG, RouteIntToCpu , ULONG, ___irq, d0, UBYTE, ___cpu, d1,\
+      , GIC400_BASE_NAME)
+
+#define UnrouteIntFromCpu(___irq, ___cpu) \
+      LP2(0x5a, ULONG, UnrouteIntFromCpu , ULONG, ___irq, d0, UBYTE, ___cpu, d1,\
+      , GIC400_BASE_NAME)
+
+#define QueryIntRoute(___irq) \
+      LP1(0x60, LONG, QueryIntRoute , ULONG, ___irq, d0,\
+      , GIC400_BASE_NAME)
+
+#define SetIntPending(___irq) \
+      LP1(0x66, ULONG, SetIntPending , ULONG, ___irq, d0,\
+      , GIC400_BASE_NAME)
+
+#define ClearIntPending(___irq) \
+      LP1(0x6c, ULONG, ClearIntPending , ULONG, ___irq, d0,\
+      , GIC400_BASE_NAME)
+
+#define SetIntActive(___irq) \
+      LP1(0x72, ULONG, SetIntActive , ULONG, ___irq, d0,\
+      , GIC400_BASE_NAME)
+
+#define ClearIntActive(___irq) \
+      LP1(0x78, ULONG, ClearIntActive , ULONG, ___irq, d0,\
+      , GIC400_BASE_NAME)
+
+#define SetPriorityMask(___mask) \
+      LP1(0x7e, ULONG, SetPriorityMask , UBYTE, ___mask, d0,\
+      , GIC400_BASE_NAME)
+
+#define GetPriorityMask() \
+      LP0(0x84, LONG, GetPriorityMask ,\
+      , GIC400_BASE_NAME)
+
+#define GetRunningPriority() \
+      LP0(0x8a, LONG, GetRunningPriority ,\
+      , GIC400_BASE_NAME)
+
+#define GetHighestPending() \
+      LP0(0x90, LONG, GetHighestPending ,\
+      , GIC400_BASE_NAME)
+
+#define GetControllerInfo(___info) \
+      LP1(0x96, LONG, GetControllerInfo , struct GICInfo *, ___info, a1,\
+      , GIC400_BASE_NAME)
+
 #endif /* !_INLINE_GIC400_H */
