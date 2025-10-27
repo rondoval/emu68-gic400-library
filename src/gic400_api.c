@@ -156,6 +156,9 @@ int gic400_init(struct GIC_Base *gicBase)
     return 0;
 }
 
+/* forward declaration */
+static void gic400_disable_irq(struct GIC_Base *gicBase, ULONG irq);
+
 /* gic400_shutdown: Remove all handlers and dispatcher.
  * Args: none.
  * Returns: void.

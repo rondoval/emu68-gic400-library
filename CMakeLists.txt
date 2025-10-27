@@ -13,7 +13,7 @@ add_compile_definitions(PRIVATE LIBRARY_IDSTRING="${VERSTRING}" LIBRARY_VERSION=
 
 add_subdirectory(common)
 
-add_compile_options(-Os -m68040 -fomit-frame-pointer -Wall -Wextra -DDEBUG)
+add_compile_options(-O3 -m68040 -fomit-frame-pointer -Wall -Wextra -DDEBUG)
 add_link_options(-ffreestanding -nostdlib -nostartfiles -Wall -Wextra -s -Wl,-e,_doNotExecute)
 
 add_library(gic400 INTERFACE)
