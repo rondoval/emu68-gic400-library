@@ -75,5 +75,113 @@
 #ifdef __CLIB_PRAGMA_AMICALL
  #pragma amicall(GIC400_Base, 0x2a, GetIntStatus(d0,a1,a2,a3))
 #endif /* __CLIB_PRAGMA_AMICALL */
+#ifdef __CLIB_PRAGMA_LIBCALL
+ #pragma libcall GIC400_Base EnableInt 30 001
+#endif /* __CLIB_PRAGMA_LIBCALL */
+#ifdef __CLIB_PRAGMA_AMICALL
+ #pragma amicall(GIC400_Base, 0x30, EnableInt(d0))
+#endif /* __CLIB_PRAGMA_AMICALL */
+#ifdef __CLIB_PRAGMA_LIBCALL
+ #pragma libcall GIC400_Base DisableInt 36 001
+#endif /* __CLIB_PRAGMA_LIBCALL */
+#ifdef __CLIB_PRAGMA_AMICALL
+ #pragma amicall(GIC400_Base, 0x36, DisableInt(d0))
+#endif /* __CLIB_PRAGMA_AMICALL */
+#ifdef __CLIB_PRAGMA_LIBCALL
+ #pragma libcall GIC400_Base SetIntPriority 3c 1002
+#endif /* __CLIB_PRAGMA_LIBCALL */
+#ifdef __CLIB_PRAGMA_AMICALL
+ #pragma amicall(GIC400_Base, 0x3c, SetIntPriority(d0,d1))
+#endif /* __CLIB_PRAGMA_AMICALL */
+#ifdef __CLIB_PRAGMA_LIBCALL
+ #pragma libcall GIC400_Base GetIntPriority 42 001
+#endif /* __CLIB_PRAGMA_LIBCALL */
+#ifdef __CLIB_PRAGMA_AMICALL
+ #pragma amicall(GIC400_Base, 0x42, GetIntPriority(d0))
+#endif /* __CLIB_PRAGMA_AMICALL */
+#ifdef __CLIB_PRAGMA_LIBCALL
+ #pragma libcall GIC400_Base SetIntTriggerEdge 48 001
+#endif /* __CLIB_PRAGMA_LIBCALL */
+#ifdef __CLIB_PRAGMA_AMICALL
+ #pragma amicall(GIC400_Base, 0x48, SetIntTriggerEdge(d0))
+#endif /* __CLIB_PRAGMA_AMICALL */
+#ifdef __CLIB_PRAGMA_LIBCALL
+ #pragma libcall GIC400_Base SetIntTriggerLevel 4e 001
+#endif /* __CLIB_PRAGMA_LIBCALL */
+#ifdef __CLIB_PRAGMA_AMICALL
+ #pragma amicall(GIC400_Base, 0x4e, SetIntTriggerLevel(d0))
+#endif /* __CLIB_PRAGMA_AMICALL */
+#ifdef __CLIB_PRAGMA_LIBCALL
+ #pragma libcall GIC400_Base RouteIntToCpu 54 1002
+#endif /* __CLIB_PRAGMA_LIBCALL */
+#ifdef __CLIB_PRAGMA_AMICALL
+ #pragma amicall(GIC400_Base, 0x54, RouteIntToCpu(d0,d1))
+#endif /* __CLIB_PRAGMA_AMICALL */
+#ifdef __CLIB_PRAGMA_LIBCALL
+ #pragma libcall GIC400_Base UnrouteIntFromCpu 5a 1002
+#endif /* __CLIB_PRAGMA_LIBCALL */
+#ifdef __CLIB_PRAGMA_AMICALL
+ #pragma amicall(GIC400_Base, 0x5a, UnrouteIntFromCpu(d0,d1))
+#endif /* __CLIB_PRAGMA_AMICALL */
+#ifdef __CLIB_PRAGMA_LIBCALL
+ #pragma libcall GIC400_Base QueryIntRoute 60 001
+#endif /* __CLIB_PRAGMA_LIBCALL */
+#ifdef __CLIB_PRAGMA_AMICALL
+ #pragma amicall(GIC400_Base, 0x60, QueryIntRoute(d0))
+#endif /* __CLIB_PRAGMA_AMICALL */
+#ifdef __CLIB_PRAGMA_LIBCALL
+ #pragma libcall GIC400_Base SetIntPending 66 001
+#endif /* __CLIB_PRAGMA_LIBCALL */
+#ifdef __CLIB_PRAGMA_AMICALL
+ #pragma amicall(GIC400_Base, 0x66, SetIntPending(d0))
+#endif /* __CLIB_PRAGMA_AMICALL */
+#ifdef __CLIB_PRAGMA_LIBCALL
+ #pragma libcall GIC400_Base ClearIntPending 6c 001
+#endif /* __CLIB_PRAGMA_LIBCALL */
+#ifdef __CLIB_PRAGMA_AMICALL
+ #pragma amicall(GIC400_Base, 0x6c, ClearIntPending(d0))
+#endif /* __CLIB_PRAGMA_AMICALL */
+#ifdef __CLIB_PRAGMA_LIBCALL
+ #pragma libcall GIC400_Base SetIntActive 72 001
+#endif /* __CLIB_PRAGMA_LIBCALL */
+#ifdef __CLIB_PRAGMA_AMICALL
+ #pragma amicall(GIC400_Base, 0x72, SetIntActive(d0))
+#endif /* __CLIB_PRAGMA_AMICALL */
+#ifdef __CLIB_PRAGMA_LIBCALL
+ #pragma libcall GIC400_Base ClearIntActive 78 001
+#endif /* __CLIB_PRAGMA_LIBCALL */
+#ifdef __CLIB_PRAGMA_AMICALL
+ #pragma amicall(GIC400_Base, 0x78, ClearIntActive(d0))
+#endif /* __CLIB_PRAGMA_AMICALL */
+#ifdef __CLIB_PRAGMA_LIBCALL
+ #pragma libcall GIC400_Base SetPriorityMask 7e 001
+#endif /* __CLIB_PRAGMA_LIBCALL */
+#ifdef __CLIB_PRAGMA_AMICALL
+ #pragma amicall(GIC400_Base, 0x7e, SetPriorityMask(d0))
+#endif /* __CLIB_PRAGMA_AMICALL */
+#ifdef __CLIB_PRAGMA_LIBCALL
+ #pragma libcall GIC400_Base GetPriorityMask 84 00
+#endif /* __CLIB_PRAGMA_LIBCALL */
+#ifdef __CLIB_PRAGMA_AMICALL
+ #pragma amicall(GIC400_Base, 0x84, GetPriorityMask())
+#endif /* __CLIB_PRAGMA_AMICALL */
+#ifdef __CLIB_PRAGMA_LIBCALL
+ #pragma libcall GIC400_Base GetRunningPriority 8a 00
+#endif /* __CLIB_PRAGMA_LIBCALL */
+#ifdef __CLIB_PRAGMA_AMICALL
+ #pragma amicall(GIC400_Base, 0x8a, GetRunningPriority())
+#endif /* __CLIB_PRAGMA_AMICALL */
+#ifdef __CLIB_PRAGMA_LIBCALL
+ #pragma libcall GIC400_Base GetHighestPending 90 00
+#endif /* __CLIB_PRAGMA_LIBCALL */
+#ifdef __CLIB_PRAGMA_AMICALL
+ #pragma amicall(GIC400_Base, 0x90, GetHighestPending())
+#endif /* __CLIB_PRAGMA_AMICALL */
+#ifdef __CLIB_PRAGMA_LIBCALL
+ #pragma libcall GIC400_Base GetControllerInfo 96 901
+#endif /* __CLIB_PRAGMA_LIBCALL */
+#ifdef __CLIB_PRAGMA_AMICALL
+ #pragma amicall(GIC400_Base, 0x96, GetControllerInfo(a1))
+#endif /* __CLIB_PRAGMA_AMICALL */
 
 #endif /* PRAGMAS_GIC400_PRAGMAS_H */
