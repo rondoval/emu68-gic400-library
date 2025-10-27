@@ -82,9 +82,9 @@ static int gic400_parse_devicetree(struct GIC_Base *gicBase)
         return -GIC_ERROR;
     }
 
-    Kprintf("[genet] %s: compatible: %s\n", __func__, gic_compatible);
-    Kprintf("[genet] %s: Distributor register base: %08lx\n", __func__, gicBase->gic_base_distributor);
-    Kprintf("[genet] %s: CPU Interface register base: %08lx\n", __func__, gicBase->gic_base_cpuif);
+    Kprintf("[gic] %s: compatible: %s\n", __func__, gic_compatible);
+    Kprintf("[gic] %s: Distributor register base: %08lx\n", __func__, gicBase->gic_base_distributor);
+    Kprintf("[gic] %s: CPU Interface register base: %08lx\n", __func__, gicBase->gic_base_cpuif);
 
     // We're done with the device tree
     DT_CloseKey(gic_key);
