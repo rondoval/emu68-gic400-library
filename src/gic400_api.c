@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0
 #include <gic400_private.h>
 #include <devtree.h>
+#include <exec/memory.h>
 
 extern struct ExecBase *SysBase;
 static char gic_dispatcher_name[] = "ARM GIC-400 dispatcher";
@@ -111,10 +112,13 @@ int gic400_init(struct GIC_Base *gicBase)
     gicBase->max_irqs = (GICD_TYPER_IT_LINES_NUMBER(gicBase->gicd_typer) + 1) * 32;
 
     gicBase->handler_count = 0;
-    for (ULONG i = 0; i < GIC_MAX_REGISTERED_IRQS; ++i)
+    gicBase->handlers = NULL;
+    ULONG handler_bytes = gicBase->max_irqs * sizeof(struct Interrupt *);
+    gicBase->handlers = AllocMem(handler_bytes, MEMF_CLEAR);
+    if (!gicBase->handlers)
     {
-        gicBase->handlers[i].irq = (ULONG)-1;
-        gicBase->handlers[i].interrupt = NULL;
+        Kprintf("[gic] %s: Failed to allocate handler table (%lu bytes)\n", __func__, handler_bytes);
+        return -GIC_ERROR;
     }
 
     gicc_print_info(gicBase->gicc_iidr);
@@ -162,48 +166,30 @@ void gic400_shutdown(struct GIC_Base *gicBase)
         return;
 
     Disable();
-    while (gicBase->handler_count > 0)
-    {
-        ULONG irq = gicBase->handlers[0].irq;
-        struct Interrupt *interrupt = gicBase->handlers[0].interrupt;
-
-        RemIntServerEx(irq, interrupt, gicBase);
-        Kprintf("[gic] warning: removed handler for IRQ %ld during shutdown\n", irq);
-    }
 
     RemIntServer(INTB_EXTER, &gicBase->dispatcher_interrupt);
     gicd_disable(gicBase);
 
+    for (ULONG irq = 0; irq < gicBase->max_irqs; irq++)
+    {
+        if (gicBase->handlers[irq] != NULL)
+        {
+            gic400_disable_irq(gicBase, irq);
+            gicBase->handlers[irq] = NULL;
+            Kprintf("[gic] warning: removed handler for IRQ %ld during shutdown\n", irq);
+        }
+    }
+    gicBase->handler_count = 0;
+
     Enable();
     Kprintf("[gic] dispatcher removed from INTB_EXTER\n");
-}
 
-/* find_handler: Locate existing handler entry by IRQ.
- * Args: irq - interrupt number to search for.
- * Returns: pointer to handler slot or NULL when not found.
- */
-static struct gic_irq_handler *find_handler(struct GIC_Base *gicBase, ULONG irq)
-{
-    for (ULONG i = 0; i < gicBase->handler_count; ++i)
+    if (gicBase->handlers)
     {
-        if (gicBase->handlers[i].irq == irq)
-            return &gicBase->handlers[i];
+        ULONG handler_bytes = gicBase->max_irqs * sizeof(struct Interrupt *);
+        FreeMem(gicBase->handlers, handler_bytes);
+        gicBase->handlers = NULL;
     }
-    return NULL;
-}
-
-/* find_handler_index: Return handler array index for an IRQ.
- * Args: irq - interrupt number to search for.
- * Returns: non-negative index on success, -1 on failure.
- */
-static LONG find_handler_index(struct GIC_Base *gicBase, ULONG irq)
-{
-    for (ULONG i = 0; i < gicBase->handler_count; ++i)
-    {
-        if (gicBase->handlers[i].irq == irq)
-            return (LONG)i;
-    }
-    return -1;
 }
 
 /* gic400_enable_irq: Configure group 0 SPI and enable it.
@@ -519,12 +505,11 @@ static ULONG gic400_exec_dispatcher(register struct GIC_Base *gicBase asm("a1"))
         return 0;
     }
 
-    struct gic_irq_handler *handler = find_handler(gicBase, irq);
-
-    if (handler && handler->interrupt)
+    struct Interrupt *interrupt = gicBase->handlers[irq];
+    if (interrupt)
     {
         KprintfH("[gic] Invoking handler for IRQ %ld\n", irq);
-        gic400_call_interrupt(handler->interrupt, irq);
+        gic400_call_interrupt(interrupt, irq);
     }
 
     gicc_end_interrupt(iar);
@@ -555,10 +540,10 @@ ULONG AddIntServerEx(ULONG irq asm("d0"), UBYTE priority asm("d1"), BOOL edge as
 
     Disable();
 
-    struct gic_irq_handler *existing = find_handler(gicBase, irq);
+    struct Interrupt *existing = gicBase->handlers[irq];
     if (existing)
     {
-        if (existing->interrupt == interrupt)
+        if (existing == interrupt)
         {
             Kprintf("[gic] IRQ %ld is already registered\n", irq);
             Enable();
@@ -570,15 +555,7 @@ ULONG AddIntServerEx(ULONG irq asm("d0"), UBYTE priority asm("d1"), BOOL edge as
         return -GIC_ERROR;
     }
 
-    if (gicBase->handler_count >= GIC_MAX_REGISTERED_IRQS)
-    {
-        Enable();
-        Kprintf("[gic] IRQ table full (%ld entries)\n", (ULONG)GIC_MAX_REGISTERED_IRQS);
-        return -GIC_ERROR;
-    }
-
-    gicBase->handlers[gicBase->handler_count].irq = irq;
-    gicBase->handlers[gicBase->handler_count].interrupt = interrupt;
+    gicBase->handlers[irq] = interrupt;
     gicBase->handler_count++;
     gic400_enable_irq(gicBase, irq, priority, edge);
 
@@ -606,27 +583,25 @@ ULONG RemIntServerEx(ULONG irq asm("d0"), struct Interrupt *interrupt asm("a1"),
 
     Disable();
 
-    LONG index = find_handler_index(gicBase, irq);
-    if (index < 0)
+    struct Interrupt *current = gicBase->handlers[irq];
+    if (!current)
     {
         Kprintf("[gic] No handler registered for IRQ %ld\n", irq);
+        Enable();
+        return -GIC_ERROR;
+    }
+    if (current != interrupt)
+    {
+        Kprintf("[gic] IRQ %ld registered with a different server\n", irq);
         Enable();
         return -GIC_ERROR;
     }
 
     gic400_disable_irq(gicBase, irq);
 
-    for (ULONG i = (ULONG)index; i + 1 < gicBase->handler_count; ++i)
-    {
-        gicBase->handlers[i] = gicBase->handlers[i + 1];
-    }
-
+    gicBase->handlers[irq] = NULL;
     if (gicBase->handler_count > 0)
-    {
         gicBase->handler_count--;
-        gicBase->handlers[gicBase->handler_count].irq = (ULONG)-1;
-        gicBase->handlers[gicBase->handler_count].interrupt = NULL;
-    }
 
     Enable();
     return 0;

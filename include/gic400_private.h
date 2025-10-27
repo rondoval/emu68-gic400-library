@@ -37,14 +37,6 @@
 #endif
 
 #define GIC_ERROR 1
-#define GIC_MAX_REGISTERED_IRQS 16U /* ...should be enough for everyone ;) */
-
-struct gic_irq_handler
-{
-    ULONG irq;
-    struct Interrupt *interrupt;
-};
-
 struct GIC_Base
 {
     struct Library libNode;
@@ -59,8 +51,7 @@ struct GIC_Base
     APTR gic_base_distributor;
     APTR gic_base_cpuif;
     ULONG max_irqs;
-
-    struct gic_irq_handler handlers[GIC_MAX_REGISTERED_IRQS];
+    struct Interrupt **handlers;
     ULONG handler_count;
 
     struct Interrupt dispatcher_interrupt;
