@@ -57,3 +57,5 @@ dkms.conf
 # build dir
 build/
 .vscode/
+external/
+.idea/
