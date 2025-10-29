@@ -34,4 +34,17 @@ target_link_options(gic400.library PRIVATE -ffreestanding -nostdlib -nostartfile
 target_include_directories(gic400.library PRIVATE include)
 target_compile_options(gic400.library PUBLIC $<$<COMPILE_LANGUAGE:C>:-O3 -m68040 -fomit-frame-pointer -Wall -Wextra -DDEBUG>)
 
-# install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/gic400.library DESTINATION GIC400/)
+# Set up information for Aminet
+add_project_info(
+    "gic400.library for PiStorm/Emu68"
+    "Lukasz Winczura"
+    "driver/other"
+    "m68k-amigaos"
+)
+
+add_aminet_readme_generator(gic400.library "gic400.library.readme")
+
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/sfd/gic400_lib.sfd DESTINATION Developer/sfd)
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/ DESTINATION Developer/include)
+install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/ DESTINATION Developer/include)
+install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/gic400.library DESTINATION ".")

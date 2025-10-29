@@ -8,7 +8,7 @@ CPMDeclarePackage(CPMLicenses.cmake
 )
 # Common CMake additions for Amiga
 CPMDeclarePackage(CMakeAmigaCommon
-  GIT_TAG 1.0.4
+  GIT_TAG 1.0.5
   GITHUB_REPOSITORY AmigaPorts/cmake-amiga-common-library
 )
 # Emu68 devicetree.resource
