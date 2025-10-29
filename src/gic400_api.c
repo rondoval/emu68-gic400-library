@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: MPL-2.0
 #include <gic400_private.h>
 #include <devtree.h>
 #include <exec/memory.h>

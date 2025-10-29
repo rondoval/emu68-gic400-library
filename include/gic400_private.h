@@ -1,3 +1,4 @@
+//SPDX-License-Identifier: MPL-2.0
 #ifndef _GIC400_PRIVATE_H
 #define _GIC400_PRIVATE_H
 
