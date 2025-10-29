@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.14.0)
 project(gic400.library VERSION 1.0.0)
 
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
-
 include(CPM-init)
 
 get_verstring(VERSTRING)
@@ -37,7 +36,7 @@ target_compile_options(gic400.library PUBLIC $<$<COMPILE_LANGUAGE:C>:-O3 -m68040
 # Set up information for Aminet
 add_project_info(
     "gic400.library for PiStorm/Emu68"
-    "Lukasz Winczura"
+    "rondoval@gmail.com (Lukasz Winczura)"
     "driver/other"
     "m68k-amigaos"
 )
