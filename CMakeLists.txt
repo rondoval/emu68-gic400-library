@@ -18,6 +18,7 @@ endif()
 add_subdirectory(common)
 
 sfdc(sfd/gic400_lib.sfd)
+target_include_directories(gic400 INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 add_executable(gic400.library
     src/gic400_main.c
@@ -30,7 +31,6 @@ target_compile_definitions(gic400.library PRIVATE LIBRARY_IDSTRING="${VERSTRING}
 add_dependencies(gic400.library devicetree gic400)
 target_link_libraries(gic400.library common gic400 devicetree)
 target_link_options(gic400.library PRIVATE -ffreestanding -nostdlib -nostartfiles -Wall -Wextra -s -Wl,-e,_doNotExecute)
-target_include_directories(gic400.library PRIVATE include)
 target_compile_options(gic400.library PUBLIC $<$<COMPILE_LANGUAGE:C>:-O3 -m68040 -fomit-frame-pointer -Wall -Wextra -DDEBUG>)
 
 # Set up information for Aminet
