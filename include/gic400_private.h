@@ -2,6 +2,7 @@
 #ifndef _GIC400_PRIVATE_H
 #define _GIC400_PRIVATE_H
 
+#include <common/compiler.h>
 #include <exec/libraries.h>
 #include <exec/types.h>
 #include <exec/semaphores.h>

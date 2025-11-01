@@ -1,4 +1,4 @@
-==id $Id: gic400.sfd 1.0.0 $
+==id $Id: gic400_lib.sfd 1.0.0 $
 * "gic400.library"
 ==base _GIC400_Base
 ==basetype struct Library *
