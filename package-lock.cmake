@@ -13,7 +13,7 @@ CPMDeclarePackage(CMakeAmigaCommon
 )
 # Emu68 devicetree.resource
 CPMDeclarePackage(devicetree.resource
-  GIT_TAG 67c8b567d04ed37ebd39baa38f554ca7784871c3
+  GIT_TAG 943f3b522b1fb049ae095a1e6dee203d43a6b11b
   GITHUB_REPOSITORY michalsc/devicetree.resource
   EXCLUDE_FROM_ALL YES
 )
