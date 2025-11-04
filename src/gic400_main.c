@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-
+#include <common/compiler.h>
 #ifdef __INTELLISENSE__
 #include <clib/exec_protos.h>
 #else
@@ -38,7 +38,7 @@ const struct Resident gicResident __attribute__((used)) = {
 
 struct ExecBase *SysBase;
 
-static ULONG LibExpunge(struct GIC_Base *gicBase asm("a6"))
+static ULONG LibExpunge(REGARG(struct GIC_Base *gicBase, "a6"))
 {
     ULONG segList = gicBase->segList;
 
@@ -61,7 +61,7 @@ static ULONG LibExpunge(struct GIC_Base *gicBase asm("a6"))
     return segList;
 }
 
-struct Library *LibInit(struct Library *base asm("d0"), ULONG seglist asm("a0"), struct ExecBase *execBase asm("a6"))
+struct Library *LibInit(REGARG(struct Library *base, "d0"), REGARG(ULONG seglist, "a0"), REGARG(struct ExecBase *execBase, "a6"))
 {
     struct GIC_Base *gicBase = (struct GIC_Base *)base;
     SysBase = execBase;
@@ -82,7 +82,7 @@ struct Library *LibInit(struct Library *base asm("d0"), ULONG seglist asm("a0"),
     return base;
 }
 
-static struct GIC_Base *LibOpen(ULONG version asm("d0"), struct GIC_Base *gicBase asm("a6"))
+static struct GIC_Base *LibOpen(REGARG(ULONG version, "d0"), REGARG(struct GIC_Base *gicBase, "a6"))
 {
     (void)version;
     gicBase->libNode.lib_OpenCnt++;
@@ -90,7 +90,7 @@ static struct GIC_Base *LibOpen(ULONG version asm("d0"), struct GIC_Base *gicBas
     return gicBase;
 }
 
-static ULONG LibClose(struct GIC_Base *gicBase asm("a6"))
+static ULONG LibClose(REGARG(struct GIC_Base *gicBase, "a6"))
 {
     gicBase->libNode.lib_OpenCnt--;
 

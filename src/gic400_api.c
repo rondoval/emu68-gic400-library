@@ -6,7 +6,7 @@
 extern struct ExecBase *SysBase;
 static char gic_dispatcher_name[] = "ARM GIC-400 dispatcher";
 
-static ULONG gic400_exec_dispatcher(register struct GIC_Base *gicBase asm("a1"));
+static ULONG gic400_exec_dispatcher(REGARG(register struct GIC_Base *gicBase, "a1"));
 
 static int gic400_validate_irq(struct GIC_Base *gicBase, ULONG irq)
 {
@@ -229,7 +229,7 @@ static void gic400_disable_irq(struct GIC_Base *gicBase, ULONG irq)
  * Args: irq - interrupt number; pending/active/enabled - optional outputs.
  * Returns: 0 on success, -GIC_ERROR on invalid IRQ.
  */
-ULONG GetIntStatus(ULONG irq asm("d0"), BOOL *pending asm("a1"), BOOL *active asm("a2"), BOOL *enabled asm("a3"), struct GIC_Base *gicBase asm("a6"))
+ULONG GetIntStatus(REGARG(ULONG irq, "d0"), REGARG(BOOL *pending, "a1"), REGARG(BOOL *active, "a2"), REGARG(BOOL *enabled, "a3"), struct GIC_Base *gicBase asm("a6"))
 {
     if (gic400_validate_irq(gicBase, irq) < 0)
         return -GIC_ERROR;
@@ -244,7 +244,7 @@ ULONG GetIntStatus(ULONG irq asm("d0"), BOOL *pending asm("a1"), BOOL *active as
     return 0;
 }
 
-ULONG EnableInt(ULONG irq asm("d0"), struct GIC_Base *gicBase asm("a6"))
+ULONG EnableInt(REGARG(ULONG irq, "d0"), REGARG(struct GIC_Base *gicBase, "a6"))
 {
     if (gic400_validate_irq(gicBase, irq) < 0)
         return -GIC_ERROR;
@@ -253,7 +253,7 @@ ULONG EnableInt(ULONG irq asm("d0"), struct GIC_Base *gicBase asm("a6"))
     return 0;
 }
 
-ULONG DisableInt(ULONG irq asm("d0"), struct GIC_Base *gicBase asm("a6"))
+ULONG DisableInt(REGARG(ULONG irq, "d0"), REGARG(struct GIC_Base *gicBase, "a6"))
 {
     if (gic400_validate_irq(gicBase, irq) < 0)
         return -GIC_ERROR;
@@ -262,7 +262,7 @@ ULONG DisableInt(ULONG irq asm("d0"), struct GIC_Base *gicBase asm("a6"))
     return 0;
 }
 
-ULONG SetIntPriority(ULONG irq asm("d0"), UBYTE priority asm("d1"), struct GIC_Base *gicBase asm("a6"))
+ULONG SetIntPriority(REGARG(ULONG irq, "d0"), REGARG(UBYTE priority, "d1"), REGARG(struct GIC_Base *gicBase, "a6"))
 {
     if (gic400_validate_irq(gicBase, irq) < 0)
         return -GIC_ERROR;
@@ -272,7 +272,7 @@ ULONG SetIntPriority(ULONG irq asm("d0"), UBYTE priority asm("d1"), struct GIC_B
 }
 
 /* GetIntPriority: Return the priority byte for an IRQ or -GIC_ERROR on failure. */
-LONG GetIntPriority(ULONG irq asm("d0"), struct GIC_Base *gicBase asm("a6"))
+LONG GetIntPriority(REGARG(ULONG irq, "d0"), REGARG(struct GIC_Base *gicBase, "a6"))
 {
     if (gic400_validate_irq(gicBase, irq) < 0)
         return -GIC_ERROR;
@@ -280,7 +280,7 @@ LONG GetIntPriority(ULONG irq asm("d0"), struct GIC_Base *gicBase asm("a6"))
     return (LONG)gicd_get_priority(gicBase, irq);
 }
 
-ULONG SetIntTriggerEdge(ULONG irq asm("d0"), struct GIC_Base *gicBase asm("a6"))
+ULONG SetIntTriggerEdge(REGARG(ULONG irq, "d0"), REGARG(struct GIC_Base *gicBase, "a6"))
 {
     if (gic400_validate_irq(gicBase, irq) < 0)
         return -GIC_ERROR;
@@ -289,7 +289,7 @@ ULONG SetIntTriggerEdge(ULONG irq asm("d0"), struct GIC_Base *gicBase asm("a6"))
     return 0;
 }
 
-ULONG SetIntTriggerLevel(ULONG irq asm("d0"), struct GIC_Base *gicBase asm("a6"))
+ULONG SetIntTriggerLevel(REGARG(ULONG irq, "d0"), REGARG(struct GIC_Base *gicBase, "a6"))
 {
     if (gic400_validate_irq(gicBase, irq) < 0)
         return -GIC_ERROR;
@@ -315,7 +315,7 @@ static int gic400_validate_cpu_target(const char *caller, ULONG irq, UBYTE cpu)
     return 0;
 }
 
-ULONG RouteIntToCpu(ULONG irq asm("d0"), UBYTE cpu asm("d1"), struct GIC_Base *gicBase asm("a6"))
+ULONG RouteIntToCpu(REGARG(ULONG irq, "d0"), REGARG(UBYTE cpu, "d1"), REGARG(struct GIC_Base *gicBase, "a6"))
 {
     if (gic400_validate_irq(gicBase, irq) < 0)
         return -GIC_ERROR;
@@ -326,7 +326,7 @@ ULONG RouteIntToCpu(ULONG irq asm("d0"), UBYTE cpu asm("d1"), struct GIC_Base *g
     return 0;
 }
 
-ULONG UnrouteIntFromCpu(ULONG irq asm("d0"), UBYTE cpu asm("d1"), struct GIC_Base *gicBase asm("a6"))
+ULONG UnrouteIntFromCpu(REGARG(ULONG irq, "d0"), REGARG(UBYTE cpu, "d1"), REGARG(struct GIC_Base *gicBase, "a6"))
 {
     if (gic400_validate_irq(gicBase, irq) < 0)
         return -GIC_ERROR;
@@ -338,7 +338,7 @@ ULONG UnrouteIntFromCpu(ULONG irq asm("d0"), UBYTE cpu asm("d1"), struct GIC_Bas
 }
 
 /* QueryIntRoute: Return CPU target mask for an SPI or -GIC_ERROR on failure. */
-LONG QueryIntRoute(ULONG irq asm("d0"), struct GIC_Base *gicBase asm("a6"))
+LONG QueryIntRoute(REGARG(ULONG irq, "d0"), REGARG(struct GIC_Base *gicBase, "a6"))
 {
     if (gic400_validate_irq(gicBase, irq) < 0)
         return -GIC_ERROR;
@@ -351,7 +351,7 @@ LONG QueryIntRoute(ULONG irq asm("d0"), struct GIC_Base *gicBase asm("a6"))
     return (LONG)gicd_get_cpu_mask(gicBase, irq);
 }
 
-ULONG SetIntPending(ULONG irq asm("d0"), struct GIC_Base *gicBase asm("a6"))
+ULONG SetIntPending(REGARG(ULONG irq, "d0"), REGARG(struct GIC_Base *gicBase, "a6"))
 {
     if (gic400_validate_irq(gicBase, irq) < 0)
         return -GIC_ERROR;
@@ -360,7 +360,7 @@ ULONG SetIntPending(ULONG irq asm("d0"), struct GIC_Base *gicBase asm("a6"))
     return 0;
 }
 
-ULONG ClearIntPending(ULONG irq asm("d0"), struct GIC_Base *gicBase asm("a6"))
+ULONG ClearIntPending(REGARG(ULONG irq, "d0"), REGARG(struct GIC_Base *gicBase, "a6"))
 {
     if (gic400_validate_irq(gicBase, irq) < 0)
         return -GIC_ERROR;
@@ -369,7 +369,7 @@ ULONG ClearIntPending(ULONG irq asm("d0"), struct GIC_Base *gicBase asm("a6"))
     return 0;
 }
 
-ULONG SetIntActive(ULONG irq asm("d0"), struct GIC_Base *gicBase asm("a6"))
+ULONG SetIntActive(REGARG(ULONG irq, "d0"), REGARG(struct GIC_Base *gicBase, "a6"))
 {
     if (gic400_validate_irq(gicBase, irq) < 0)
         return -GIC_ERROR;
@@ -378,7 +378,7 @@ ULONG SetIntActive(ULONG irq asm("d0"), struct GIC_Base *gicBase asm("a6"))
     return 0;
 }
 
-ULONG ClearIntActive(ULONG irq asm("d0"), struct GIC_Base *gicBase asm("a6"))
+ULONG ClearIntActive(REGARG(ULONG irq, "d0"), REGARG(struct GIC_Base *gicBase, "a6"))
 {
     if (gic400_validate_irq(gicBase, irq) < 0)
         return -GIC_ERROR;
@@ -387,7 +387,7 @@ ULONG ClearIntActive(ULONG irq asm("d0"), struct GIC_Base *gicBase asm("a6"))
     return 0;
 }
 
-ULONG SetPriorityMask(UBYTE mask asm("d0"), struct GIC_Base *gicBase asm("a6"))
+ULONG SetPriorityMask(REGARG(UBYTE mask, "d0"), REGARG(struct GIC_Base *gicBase, "a6"))
 {
     if (!gicBase)
     {
@@ -400,7 +400,7 @@ ULONG SetPriorityMask(UBYTE mask asm("d0"), struct GIC_Base *gicBase asm("a6"))
 }
 
 /* GetPriorityMask: Return current CPU interface priority mask or -GIC_ERROR. */
-LONG GetPriorityMask(struct GIC_Base *gicBase asm("a6"))
+LONG GetPriorityMask(REGARG(struct GIC_Base *gicBase, "a6"))
 {
     if (!gicBase)
     {
@@ -414,7 +414,7 @@ LONG GetPriorityMask(struct GIC_Base *gicBase asm("a6"))
 }
 
 /* GetRunningPriority: Return the currently running priority or -GIC_ERROR. */
-LONG GetRunningPriority(struct GIC_Base *gicBase asm("a6"))
+LONG GetRunningPriority(REGARG(struct GIC_Base *gicBase, "a6"))
 {
     if (!gicBase)
     {
@@ -426,7 +426,7 @@ LONG GetRunningPriority(struct GIC_Base *gicBase asm("a6"))
 }
 
 /* GetHighestPending: Return IRQID of highest priority pending interrupt or -GIC_ERROR. */
-LONG GetHighestPending(struct GIC_Base *gicBase asm("a6"))
+LONG GetHighestPending(REGARG(struct GIC_Base *gicBase, "a6"))
 {
     if (!gicBase)
     {
@@ -437,7 +437,7 @@ LONG GetHighestPending(struct GIC_Base *gicBase asm("a6"))
     return (LONG)gicc_get_highest_pending();
 }
 
-LONG GetControllerInfo(struct GICInfo *info asm("a1"), struct GIC_Base *gicBase asm("a6"))
+LONG GetControllerInfo(REGARG(struct GICInfo *info, "a1"), REGARG(struct GIC_Base *gicBase, "a6"))
 {
     if (!gicBase)
     {
@@ -489,7 +489,7 @@ static inline void gic400_call_interrupt(struct Interrupt *interrupt, ULONG irq)
  * Args: none.
  * Returns: void.
  */
-static ULONG gic400_exec_dispatcher(register struct GIC_Base *gicBase asm("a1"))
+static ULONG gic400_exec_dispatcher(REGARG(register struct GIC_Base *gicBase, "a1"))
 {
     if (!gicBase)
         return 0;
@@ -527,7 +527,7 @@ static ULONG gic400_exec_dispatcher(register struct GIC_Base *gicBase asm("a1"))
  *  interrupt - Exec interrupt descriptor
  * Returns: 0 on success, -GIC_ERROR when registration fails.
  */
-ULONG AddIntServerEx(ULONG irq asm("d0"), UBYTE priority asm("d1"), BOOL edge asm("d2"), struct Interrupt *interrupt asm("a1"), struct GIC_Base *gicBase asm("a6"))
+ULONG AddIntServerEx(REGARG(ULONG irq, "d0"), REGARG(UBYTE priority, "d1"), REGARG(BOOL edge, "d2"), REGARG(struct Interrupt *interrupt, "a1"), REGARG(struct GIC_Base *gicBase, "a6"))
 {
     if (!gicBase)
         return -GIC_ERROR;
@@ -570,7 +570,7 @@ ULONG AddIntServerEx(ULONG irq asm("d0"), UBYTE priority asm("d1"), BOOL edge as
  * Args: irq - interrupt number; interrupt - handler to remove.
  * Returns: 0 on success, -GIC_ERROR if not found or mismatched.
  */
-ULONG RemIntServerEx(ULONG irq asm("d0"), struct Interrupt *interrupt asm("a1"), struct GIC_Base *gicBase asm("a6"))
+ULONG RemIntServerEx(REGARG(ULONG irq, "d0"), REGARG(struct Interrupt *interrupt, "a1"), REGARG(struct GIC_Base *gicBase, "a6"))
 {
     if (!gicBase)
         return -GIC_ERROR;
