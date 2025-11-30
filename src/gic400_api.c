@@ -209,6 +209,9 @@ static void gic400_enable_irq(struct GIC_Base *gicBase, ULONG irq, UBYTE priorit
 
     gicd_set_priority(gicBase, irq, priority); // set priority
     gicd_set_cpu(gicBase, irq, 0, TRUE);       // route to CPU0
+    gicd_set_cpu(gicBase, irq, 1, FALSE);       
+    gicd_set_cpu(gicBase, irq, 2, FALSE);       
+    gicd_set_cpu(gicBase, irq, 3, FALSE);       
     gicd_set_trigger(gicBase, irq, edge);      // set level-triggered
 
     gicd_enable_irq(gicBase, irq); // enable IRQ
@@ -482,7 +485,7 @@ static inline void gic400_call_interrupt(struct Interrupt *interrupt, ULONG irq)
           [data] "r"(interrupt->is_Data),
           [irq] "r"(irq),
           [sysbase] "r"(SysBase)
-        : "d0", "d1", "a0", "a1", "a6");
+        : "d0", "d1", "a0", "a1", "a5", "a6");
 }
 
 /* gic400_exec_dispatcher: Exec interrupt server for INTB_EXTER hook.

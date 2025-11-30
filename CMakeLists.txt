@@ -14,7 +14,7 @@ endif()
 
 add_compile_definitions(PRIVATE LIBRARY_IDSTRING="${VERSTRING}" LIBRARY_VERSION=${PROJECT_VERSION_MAJOR} LIBRARY_REVISION=${PROJECT_VERSION_MINOR} LIBRARY_NAME="${PROJECT_NAME}")
 
-add_compile_options(-O3 -m68040 -fomit-frame-pointer -Wall -Wextra -DDEBUG)
+add_compile_options(-Os -m68040 -fomit-frame-pointer -Wall -Wextra -DDEBUG)
 add_link_options(-ffreestanding -nostdlib -nostartfiles -Wall -Wextra -s -Wl,-e,_doNotExecute)
 
 add_library(gic400_headers INTERFACE)
