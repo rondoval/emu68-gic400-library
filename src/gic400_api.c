@@ -495,20 +495,24 @@ static inline void gic400_call_interrupt(struct Interrupt *interrupt, ULONG irq)
 static ULONG gic400_exec_dispatcher(register struct GIC_Base *gicBase asm("a1"))
 {
     if (!gicBase)
+    {
+        KprintfH("[gic] %s: NULL GIC base\n", __func__);
         return 0;
+    }
 
     ULONG iar = gicc_acknowledge_interrupt();
     ULONG irq = iar & 0x3FF;
 
     if (irq == 0x3FF || irq == 0x3FE)
     {
+        KprintfH("[gic] Spurious interrupt received (IAR=0x%08lx)\n", iar);
         return 0; // No pending interrupts
     }
 
     if (irq >= gicBase->max_irqs)
     {
         gicc_end_interrupt(iar);
-        return 0;
+        return 1;
     }
 
     struct Interrupt *interrupt = gicBase->handlers[irq];
