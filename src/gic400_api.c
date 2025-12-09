@@ -92,6 +92,9 @@ static int gic400_parse_devicetree(struct GIC_Base *gicBase)
     return 0;
 }
 
+/* forward declaration */
+static void gic400_disable_irq(struct GIC_Base *gicBase, ULONG irq);
+
 /* gic400_init: Initialize GIC state and install dispatcher.
  * Args: base - physical base address shared with Emu68.
  * Returns: 0 on success, -GIC_ERROR on failure.
@@ -126,6 +129,14 @@ int gic400_init(struct GIC_Base *gicBase)
 
     Disable();
 
+    /* We're not sure what the state of the GIC-400 is.
+     * So, to be on the safe side, we'll unroute all SPIs
+     * from CPU 0 before enabling the controller and distributor */
+    for (ULONG irq = 0; irq < gicBase->max_irqs; irq++)
+    {
+        gicd_set_cpu(gicBase, irq, 0, FALSE);
+    }
+
     gicc_set_priority_mask(0x7F); // allow all priorities
 
     ULONG ctlr = gicc_get_ctlr();
@@ -155,9 +166,6 @@ int gic400_init(struct GIC_Base *gicBase)
 
     return 0;
 }
-
-/* forward declaration */
-static void gic400_disable_irq(struct GIC_Base *gicBase, ULONG irq);
 
 /* gic400_shutdown: Remove all handlers and dispatcher.
  * Args: none.
