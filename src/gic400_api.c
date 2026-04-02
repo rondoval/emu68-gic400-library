@@ -92,6 +92,9 @@ static int gic400_parse_devicetree(struct GIC_Base *gicBase)
     return 0;
 }
 
+/* forward declaration */
+static void gic400_disable_irq(struct GIC_Base *gicBase, ULONG irq);
+
 /* gic400_init: Initialize GIC state and install dispatcher.
  * Args: base - physical base address shared with Emu68.
  * Returns: 0 on success, -GIC_ERROR on failure.
@@ -126,6 +129,14 @@ int gic400_init(struct GIC_Base *gicBase)
 
     Disable();
 
+    /* We're not sure what the state of the GIC-400 is.
+     * So, to be on the safe side, we'll unroute all SPIs
+     * from CPU 0 before enabling the controller and distributor */
+    for (ULONG irq = 0; irq < gicBase->max_irqs; irq++)
+    {
+        gicd_set_cpu(gicBase, irq, 0, FALSE);
+    }
+
     gicc_set_priority_mask(0x7F); // allow all priorities
 
     ULONG ctlr = gicc_get_ctlr();
@@ -155,9 +166,6 @@ int gic400_init(struct GIC_Base *gicBase)
 
     return 0;
 }
-
-/* forward declaration */
-static void gic400_disable_irq(struct GIC_Base *gicBase, ULONG irq);
 
 /* gic400_shutdown: Remove all handlers and dispatcher.
  * Args: none.
@@ -209,6 +217,9 @@ static void gic400_enable_irq(struct GIC_Base *gicBase, ULONG irq, UBYTE priorit
 
     gicd_set_priority(gicBase, irq, priority); // set priority
     gicd_set_cpu(gicBase, irq, 0, TRUE);       // route to CPU0
+    gicd_set_cpu(gicBase, irq, 1, FALSE);       
+    gicd_set_cpu(gicBase, irq, 2, FALSE);       
+    gicd_set_cpu(gicBase, irq, 3, FALSE);       
     gicd_set_trigger(gicBase, irq, edge);      // set level-triggered
 
     gicd_enable_irq(gicBase, irq); // enable IRQ
@@ -482,7 +493,7 @@ static inline void gic400_call_interrupt(struct Interrupt *interrupt, ULONG irq)
           [data] "r"(interrupt->is_Data),
           [irq] "r"(irq),
           [sysbase] "r"(SysBase)
-        : "d0", "d1", "a0", "a1", "a6");
+        : "d0", "d1", "a0", "a1", "a5", "a6");
 }
 
 /* gic400_exec_dispatcher: Exec interrupt server for INTB_EXTER hook.
@@ -492,20 +503,24 @@ static inline void gic400_call_interrupt(struct Interrupt *interrupt, ULONG irq)
 static ULONG gic400_exec_dispatcher(register struct GIC_Base *gicBase asm("a1"))
 {
     if (!gicBase)
+    {
+        KprintfH("[gic] %s: NULL GIC base\n", __func__);
         return 0;
+    }
 
     ULONG iar = gicc_acknowledge_interrupt();
     ULONG irq = iar & 0x3FF;
 
     if (irq == 0x3FF || irq == 0x3FE)
     {
+        KprintfH("[gic] Spurious interrupt received (IAR=0x%08lx)\n", iar);
         return 0; // No pending interrupts
     }
 
     if (irq >= gicBase->max_irqs)
     {
         gicc_end_interrupt(iar);
-        return 0;
+        return 1;
     }
 
     struct Interrupt *interrupt = gicBase->handlers[irq];
