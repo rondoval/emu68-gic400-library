@@ -73,7 +73,11 @@ struct Library *LibInit(struct Library *base asm("d0"), ULONG seglist asm("a0"),
     if (res != 0)
     {
         Kprintf("[gic] %s: Failed to initialize GIC-400 library\n", __func__);
-        LibExpunge(gicBase);
+
+        /* Calculate size of library base and deallocate memory */
+        ULONG size = gicBase->libNode.lib_NegSize + gicBase->libNode.lib_PosSize;
+        FreeMem((APTR)((ULONG)gicBase - gicBase->libNode.lib_NegSize), size);
+
         return NULL;
     }
 

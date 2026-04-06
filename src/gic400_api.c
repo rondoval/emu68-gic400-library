@@ -42,7 +42,7 @@ static int gic400_parse_devicetree(struct GIC_Base *gicBase)
         return -GIC_ERROR;
     }
 
-    const ULONG gic_phandle = DT_GetPropertyValueULONG(root_key, "interrupt-controller", 1, FALSE);
+    const ULONG gic_phandle = DT_GetPropertyValueULONG(root_key, "interrupt-parent", 1, FALSE);
 
     APTR gic_key = DT_FindByPHandle(root_key, gic_phandle);
     if (gic_key == NULL)
@@ -53,6 +53,13 @@ static int gic400_parse_devicetree(struct GIC_Base *gicBase)
     }
 
     CONST_STRPTR gic_compatible = DT_GetPropValue(DT_FindProperty(gic_key, (CONST_STRPTR) "compatible"));
+    if (gic_compatible == NULL || _Strnicmp((STRPTR)gic_compatible, (STRPTR) "arm,gic", 7) != 0)
+    {
+        Kprintf("[gic] %s: GIC compatible string is not 'arm,gic-400': %s\n", __func__, gic_compatible);
+        DT_CloseKey(gic_key);
+        DT_CloseKey(root_key);
+        return -GIC_ERROR;
+    }
     // TODO this is awful. rework DT_TranslateAddress
 
     const APTR parent_key = DT_GetParent(gic_key);
@@ -140,14 +147,12 @@ int gic400_init(struct GIC_Base *gicBase)
     gicc_set_priority_mask(0x7F); // allow all priorities
 
     ULONG ctlr = gicc_get_ctlr();
-    gicc_log_ctlr((CONST_STRPTR) "Initial", ctlr);
 
     ctlr &= ~GICC_CTLR_EOI_MODE_NS;        // GICC_EOIR does both priority drop and deactivate
     ctlr |= GICC_CTLR_ENABLE_GRP1;         // enable CPU interface
     ctlr |= GICC_CTLR_FIQ_BYPASS_DIS_GRP1; // disable bypassing of FIQ for Group 1
     ctlr |= GICC_CTLR_IRQ_BYPASS_DIS_GRP1; // disable bypassing of IRQ for Group 1
 
-    gicc_log_ctlr((CONST_STRPTR) "Configured", ctlr);
     gicc_set_ctlr(ctlr);
 
     ctlr = gicc_get_ctlr();
