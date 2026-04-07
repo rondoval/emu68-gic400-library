@@ -3,9 +3,38 @@ project(gic400.library VERSION 1.1.0)
 
 string(TIMESTAMP CURRENT_DATE "(%d.%m.%Y)")
 set(VERSTRING "$VER: ${PROJECT_NAME} ${PROJECT_VERSION} ${CURRENT_DATE}")
+string(REGEX REPLACE "\\.library$" "" LIBRARY_BASENAME "${PROJECT_NAME}")
 
-# Depend on shared Emu68 common library headers/implementation
-find_package(Emu68Common REQUIRED)
+find_program(SFDC_EXECUTABLE
+    NAMES sfdc
+    HINTS /opt/m68k-amigaos/bin
+    REQUIRED
+)
+
+set(GIC400_GENERATED_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated/include)
+set(GIC400_SFD_FILE ${CMAKE_CURRENT_SOURCE_DIR}/sfd/${LIBRARY_BASENAME}.sfd)
+set(GIC400_GENERATED_HEADERS
+    ${GIC400_GENERATED_INCLUDE_DIR}/clib/${LIBRARY_BASENAME}_protos.h
+    ${GIC400_GENERATED_INCLUDE_DIR}/inline/${LIBRARY_BASENAME}.h
+    ${GIC400_GENERATED_INCLUDE_DIR}/pragmas/${LIBRARY_BASENAME}_pragmas.h
+    ${GIC400_GENERATED_INCLUDE_DIR}/proto/${LIBRARY_BASENAME}.h
+)
+
+add_custom_command(
+    OUTPUT ${GIC400_GENERATED_HEADERS}
+    COMMAND ${CMAKE_COMMAND}
+        -DSFDC_EXECUTABLE=${SFDC_EXECUTABLE}
+        -DSFD_FILE=${GIC400_SFD_FILE}
+        -DOUTPUT_DIR=${GIC400_GENERATED_INCLUDE_DIR}
+        -DOUTPUT_BASENAME=${LIBRARY_BASENAME}
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/GenerateSfdHeaders.cmake
+    DEPENDS
+        ${GIC400_SFD_FILE}
+        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/GenerateSfdHeaders.cmake
+    VERBATIM
+)
+
+add_custom_target(gic400_sfd_headers ALL DEPENDS ${GIC400_GENERATED_HEADERS})
 
 # Set default install prefix to ./install subdirectory
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
@@ -28,25 +57,26 @@ add_executable(gic400_library
 target_include_directories(gic400_headers
     INTERFACE
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<BUILD_INTERFACE:${GIC400_GENERATED_INCLUDE_DIR}>
         $<INSTALL_INTERFACE:include>
 )
-target_include_directories(gic400_library PRIVATE include)
-target_link_libraries(gic400_library
-    PRIVATE
-        Emu68Common::common
-)
+target_include_directories(gic400_library PRIVATE include ${GIC400_GENERATED_INCLUDE_DIR})
+add_dependencies(gic400_library gic400_sfd_headers)
 
 set_target_properties(gic400_library PROPERTIES
     OUTPUT_NAME gic400
     SUFFIX ".library"
 )
 
-# install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/gic400.library DESTINATION GIC400/)
-
 install(
     DIRECTORY include/
     DESTINATION include
-    PATTERN "gic400_private.h" EXCLUDE
+    PATTERN "${LIBRARY_BASENAME}_private.h" EXCLUDE
+)
+
+install(
+    DIRECTORY ${GIC400_GENERATED_INCLUDE_DIR}/
+    DESTINATION include
 )
 
 install(TARGETS gic400_headers gic400_library
