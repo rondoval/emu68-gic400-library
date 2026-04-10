@@ -3,12 +3,22 @@
 #define _GIC400_PRIVATE_H
 
 #include <exec/libraries.h>
+
+#define __NOLIBBASE__
+#define EXEC_BASE_NAME (*(struct ExecBase **)4UL)
+
+#ifdef __INTELLISENSE__
+#include <clib/exec_protos.h>
+#else
+#include <proto/exec.h>
+#endif
+
 #include <exec/types.h>
 #include <exec/semaphores.h>
 #include <exec/interrupts.h>
+#include <emu_iomem.h>
+#include "debug.h"
 #include <hardware/intbits.h>
-#include <debug.h>
-#include <compat.h>
 #include <libraries/gic400.h>
 
 #if defined(__INTELLISENSE__)
@@ -37,7 +47,10 @@
 #define LIBRARY_PRIORITY 0
 #endif
 
+/* Error codes */
 #define GIC_ERROR 1
+
+/* GIC Base structure */
 struct GIC_Base
 {
     struct Library libNode;

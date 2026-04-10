@@ -1,17 +1,9 @@
 // SPDX-License-Identifier: MPL-2.0
 
-#ifdef __INTELLISENSE__
-#include <clib/exec_protos.h>
-#else
-#include <proto/exec.h>
-#endif
-
 #include <exec/memory.h>
-#include <exec/execbase.h>
 #include <exec/resident.h>
 
 #include <gic400_private.h>
-#include <compat.h>
 
 int __attribute__((used, no_reorder)) doNotExecute()
 {
@@ -35,8 +27,6 @@ const struct Resident gicResident __attribute__((used)) = {
     (APTR)&libraryIdString,
     (APTR)initTable,
 };
-
-struct ExecBase *SysBase;
 
 static ULONG LibExpunge(struct GIC_Base *gicBase asm("a6"))
 {
@@ -64,7 +54,7 @@ static ULONG LibExpunge(struct GIC_Base *gicBase asm("a6"))
 struct Library *LibInit(struct Library *base asm("d0"), ULONG seglist asm("a0"), struct ExecBase *execBase asm("a6"))
 {
     struct GIC_Base *gicBase = (struct GIC_Base *)base;
-    SysBase = execBase;
+    (void)execBase;
 
     gicBase->segList = seglist;
     gicBase->libNode.lib_Revision = LIBRARY_REVISION;

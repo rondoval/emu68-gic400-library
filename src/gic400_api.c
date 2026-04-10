@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MPL-2.0
-#include <gic400_private.h>
-#include <devtree.h>
 #include <exec/memory.h>
+#include <emu_string.h>
+#include <gic400_private.h>
 
-extern struct ExecBase *SysBase;
-static char gic_dispatcher_name[] = "ARM GIC-400 dispatcher";
+#define __NOLIBBASE__
+#include <devtree.h>
+
+static const char gic_dispatcher_name[] = "ARM GIC-400 dispatcher";
 
 static ULONG gic400_exec_dispatcher(register struct GIC_Base *gicBase asm("a1"));
 
@@ -33,7 +35,12 @@ static int gic400_validate_irq(struct GIC_Base *gicBase, ULONG irq)
 
 static int gic400_parse_devicetree(struct GIC_Base *gicBase)
 {
-    DT_Init();
+    APTR DeviceTreeBase = OpenResource((CONST_STRPTR) "devicetree.resource");
+    if (DeviceTreeBase == NULL)
+    {
+        Kprintf("[gic] %s: Failed to open devicetree.resource\n", __func__);
+        return -GIC_ERROR;
+    }
 
     APTR root_key = DT_OpenKey((CONST_STRPTR) "/");
     if (root_key == NULL)
@@ -162,7 +169,7 @@ int gic400_init(struct GIC_Base *gicBase)
 
     gicBase->dispatcher_interrupt.is_Node.ln_Type = NT_INTERRUPT;
     gicBase->dispatcher_interrupt.is_Node.ln_Pri = 100;
-    gicBase->dispatcher_interrupt.is_Node.ln_Name = gic_dispatcher_name;
+    gicBase->dispatcher_interrupt.is_Node.ln_Name = (char *)gic_dispatcher_name;
     gicBase->dispatcher_interrupt.is_Data = gicBase;
     gicBase->dispatcher_interrupt.is_Code = (APTR)gic400_exec_dispatcher;
     AddIntServer(INTB_EXTER, &gicBase->dispatcher_interrupt);
@@ -222,10 +229,10 @@ static void gic400_enable_irq(struct GIC_Base *gicBase, ULONG irq, UBYTE priorit
 
     gicd_set_priority(gicBase, irq, priority); // set priority
     gicd_set_cpu(gicBase, irq, 0, TRUE);       // route to CPU0
-    gicd_set_cpu(gicBase, irq, 1, FALSE);       
-    gicd_set_cpu(gicBase, irq, 2, FALSE);       
-    gicd_set_cpu(gicBase, irq, 3, FALSE);       
-    gicd_set_trigger(gicBase, irq, edge);      // set level-triggered
+    gicd_set_cpu(gicBase, irq, 1, FALSE);
+    gicd_set_cpu(gicBase, irq, 2, FALSE);
+    gicd_set_cpu(gicBase, irq, 3, FALSE);
+    gicd_set_trigger(gicBase, irq, edge); // set level-triggered
 
     gicd_enable_irq(gicBase, irq); // enable IRQ
 }
@@ -497,7 +504,7 @@ static inline void gic400_call_interrupt(struct Interrupt *interrupt, ULONG irq)
         : [code] "a"(interrupt->is_Code),
           [data] "r"(interrupt->is_Data),
           [irq] "r"(irq),
-          [sysbase] "r"(SysBase)
+          [sysbase] "r"((struct ExecBase *)EXEC_BASE_NAME)
         : "d0", "d1", "a0", "a1", "a5", "a6");
 }
 

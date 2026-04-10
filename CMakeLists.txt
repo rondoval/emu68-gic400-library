@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14.0)
-project(gic400.library VERSION 1.1.0)
+project(gic400.library VERSION 1.2.0)
 
 string(TIMESTAMP CURRENT_DATE "(%d.%m.%Y)")
 set(VERSTRING "$VER: ${PROJECT_NAME} ${PROJECT_VERSION} ${CURRENT_DATE}")
@@ -36,6 +36,8 @@ add_custom_command(
 
 add_custom_target(gic400_sfd_headers ALL DEPENDS ${GIC400_GENERATED_HEADERS})
 
+find_package(Emu68Common CONFIG REQUIRED)
+
 # Set default install prefix to ./install subdirectory
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/install" CACHE PATH "Install path" FORCE)
@@ -62,6 +64,7 @@ target_include_directories(gic400_headers
 )
 target_include_directories(gic400_library PRIVATE include ${GIC400_GENERATED_INCLUDE_DIR})
 add_dependencies(gic400_library gic400_sfd_headers)
+target_link_libraries(gic400_library PRIVATE Emu68Common::common)
 
 set_target_properties(gic400_library PROPERTIES
     OUTPUT_NAME gic400
