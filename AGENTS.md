@@ -4,6 +4,7 @@
 
 - This repo provides the `gic400.library` interface and generated AmigaOS headers under `proto/`, `clib/`, and `inline/`.
 - It is a direct runtime dependency for `genet.device` and a build dependency for PCIe MSI support.
+- The repository presents as `MPL-2.0 OR GPL-2.0+`; preserve SPDX headers on edited files.
 
 ## Build
 

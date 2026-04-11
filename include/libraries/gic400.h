@@ -1,4 +1,4 @@
-//SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: MPL-2.0 OR GPL-2.0+
 #ifndef LIBRARIES_GIC400_H
 #define LIBRARIES_GIC400_H
 

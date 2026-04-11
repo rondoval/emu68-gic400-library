@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: MPL-2.0 OR GPL-2.0+
 
 #include <exec/memory.h>
 #include <exec/resident.h>

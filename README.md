@@ -4,6 +4,10 @@
 
 **emu68-gic400-library** is a shared AmigaOS 3.x library that exposes the Arm GIC-400 interrupt controller used by Raspberry Pi 4 systems. It is designed to be consumed by drivers such as `genet.device`, consolidating interrupt routing logic in a reusable component.
 
+## License
+
+This repository is dual-licensed under `MPL-2.0 OR GPL-2.0+`. File-level SPDX headers are the authoritative statement for individual files.
+
 ## Features
 
 - Native AmigaOS library interface with `proto/`, `clib/`, and `inline/` headers.
@@ -15,10 +19,6 @@
 ## Unimplemented / Planned Features
 
 - SGI related functions (currently focused on SPIs).
-
-## Bugs
-
-- The system will hang after a soft reset if interrupts were enabled (e.g. when genet.device is online)
 
 ## Requirements
 
