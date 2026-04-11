@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 #include <exec/memory.h>
-#include <emu_string.h>
+#include <strutil.h>
 #include <gic400_private.h>
 
 #define __NOLIBBASE__
@@ -122,9 +122,9 @@ int gic400_init(struct GIC_Base *gicBase)
     if (ret < 0)
         return ret;
 
-    gicBase->gicd_iidr = readl(GICD_IIDR);
-    gicBase->gicd_typer = readl(GICD_TYPER);
-    gicBase->gicc_iidr = readl(GICC_IIDR);
+    gicBase->gicd_iidr = mmio_read32(GICD_IIDR);
+    gicBase->gicd_typer = mmio_read32(GICD_TYPER);
+    gicBase->gicc_iidr = mmio_read32(GICC_IIDR);
 
     gicBase->max_irqs = (GICD_TYPER_IT_LINES_NUMBER(gicBase->gicd_typer) + 1) * 32;
 

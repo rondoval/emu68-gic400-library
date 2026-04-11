@@ -16,7 +16,7 @@
 #include <exec/types.h>
 #include <exec/semaphores.h>
 #include <exec/interrupts.h>
-#include <emu_iomem.h>
+#include <iomem.h>
 #include "debug.h"
 #include <hardware/intbits.h>
 #include <libraries/gic400.h>
@@ -162,14 +162,14 @@ LONG GetHighestPending(struct GIC_Base *gicBase asm("a6"));
 LONG GetControllerInfo(struct GICInfo *info asm("a1"), struct GIC_Base *gicBase asm("a6"));
 
 /* Internal function prototypes and macros */
-#define gicc_set_ctlr(ctlr_value) writel((ctlr_value), GICC_CTLR)
-#define gicc_get_ctlr() readl(GICC_CTLR)
-#define gicc_set_priority_mask(priority_value) writel((priority_value), GICC_PMR)
-#define gicc_acknowledge_interrupt() readl(GICC_IAR)
-#define gicc_end_interrupt(irq_value) writel((irq_value), GICC_EOIR)
-#define gicc_deactivate_interrupt(irq_value) writel((irq_value), GICC_DIR)
-#define gicc_get_running_priority() (readl(GICC_RPR) & 0xFF)
-#define gicc_get_highest_pending() (readl(GICC_HPPIR) & 0x3FF)
+#define gicc_set_ctlr(ctlr_value) mmio_write32((ctlr_value), GICC_CTLR)
+#define gicc_get_ctlr() mmio_read32(GICC_CTLR)
+#define gicc_set_priority_mask(priority_value) mmio_write32((priority_value), GICC_PMR)
+#define gicc_acknowledge_interrupt() mmio_read32(GICC_IAR)
+#define gicc_end_interrupt(irq_value) mmio_write32((irq_value), GICC_EOIR)
+#define gicc_deactivate_interrupt(irq_value) mmio_write32((irq_value), GICC_DIR)
+#define gicc_get_running_priority() (mmio_read32(GICC_RPR) & 0xFF)
+#define gicc_get_highest_pending() (mmio_read32(GICC_HPPIR) & 0x3FF)
 
 static inline void gicc_print_info(ULONG gicc_iidr)
 {
@@ -196,7 +196,7 @@ static inline void gicc_get_priority_mask(struct GIC_Base *gicBase, UBYTE *prior
     if (!gicBase || !priority)
         return;
 
-    *priority = readl(GICC_PMR) & 0xFF;
+    *priority = mmio_read32(GICC_PMR) & 0xFF;
 }
 
 void gicd_print_info(struct GIC_Base *gicBase);
