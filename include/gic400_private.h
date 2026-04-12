@@ -16,6 +16,7 @@
 #include <exec/types.h>
 #include <exec/semaphores.h>
 #include <exec/interrupts.h>
+#include <types.h>
 #include <iomem.h>
 #include "debug.h"
 #include <hardware/intbits.h>
@@ -47,9 +48,6 @@
 #define LIBRARY_PRIORITY 0
 #endif
 
-/* Error codes */
-#define GIC_ERROR 1
-
 /* GIC Base structure */
 struct GIC_Base
 {
@@ -58,15 +56,15 @@ struct GIC_Base
 
     struct SignalSemaphore semaphore;
 
-    ULONG gicd_iidr;
-    ULONG gicd_typer;
-    ULONG gicc_iidr;
+    u32 gicd_iidr;
+    u32 gicd_typer;
+    u32 gicc_iidr;
 
     APTR gic_base_distributor;
     APTR gic_base_cpuif;
-    ULONG max_irqs;
+    u32 max_irqs;
     struct Interrupt **handlers;
-    ULONG handler_count;
+    u32 handler_count;
 
     struct Interrupt dispatcher_interrupt;
 };
@@ -93,7 +91,7 @@ struct GIC_Base
 #define GICC_CTLR_IRQ_BYPASS_DIS_GRP1 (1UL << 6)
 #define GICC_CTLR_EOI_MODE_NS (1UL << 9)
 
-#define GICC_CTLR_FLAG(value, mask) ((ULONG)(((value) & (mask)) != 0))
+#define GICC_CTLR_FLAG(value, mask) ((u32)(((value) & (mask)) != 0))
 
 /* CPU Interface */
 #define GICC_CTLR (gicBase->gic_base_cpuif + 0x000) // CPU Interface Control Register
@@ -137,31 +135,32 @@ struct GIC_Base
 // TODO SPENDSGIR(n)
 
 /* API function prototypes */
-int gic400_init(struct GIC_Base *gicBase);
-void gic400_shutdown(struct GIC_Base *gicBase);
-ULONG AddIntServerEx(ULONG irq asm("d0"), UBYTE priority asm("d1"), BOOL edge asm("d2"), struct Interrupt *interrupt asm("a1"), struct GIC_Base *gicBase asm("a6"));
-ULONG RemIntServerEx(ULONG irq asm("d0"), struct Interrupt *interrupt asm("a1"), struct GIC_Base *gicBase asm("a6"));
-ULONG GetIntStatus(ULONG irq asm("d0"), BOOL *pending asm("a1"), BOOL *active asm("a2"), BOOL *enabled asm("a3"), struct GIC_Base *gicBase asm("a6"));
-ULONG EnableInt(ULONG irq asm("d0"), struct GIC_Base *gicBase asm("a6"));
-ULONG DisableInt(ULONG irq asm("d0"), struct GIC_Base *gicBase asm("a6"));
-ULONG SetIntPriority(ULONG irq asm("d0"), UBYTE priority asm("d1"), struct GIC_Base *gicBase asm("a6"));
+LONG AddIntServerEx(ULONG irq asm("d0"), UBYTE priority asm("d1"), BOOL edge asm("d2"), struct Interrupt *interrupt asm("a1"), struct GIC_Base *gicBase asm("a6"));
+LONG RemIntServerEx(ULONG irq asm("d0"), struct Interrupt *interrupt asm("a1"), struct GIC_Base *gicBase asm("a6"));
+LONG GetIntStatus(ULONG irq asm("d0"), BOOL *pending asm("a1"), BOOL *active asm("a2"), BOOL *enabled asm("a3"), struct GIC_Base *gicBase asm("a6"));
+LONG EnableInt(ULONG irq asm("d0"), struct GIC_Base *gicBase asm("a6"));
+LONG DisableInt(ULONG irq asm("d0"), struct GIC_Base *gicBase asm("a6"));
+LONG SetIntPriority(ULONG irq asm("d0"), UBYTE priority asm("d1"), struct GIC_Base *gicBase asm("a6"));
 LONG GetIntPriority(ULONG irq asm("d0"), struct GIC_Base *gicBase asm("a6"));
-ULONG SetIntTriggerEdge(ULONG irq asm("d0"), struct GIC_Base *gicBase asm("a6"));
-ULONG SetIntTriggerLevel(ULONG irq asm("d0"), struct GIC_Base *gicBase asm("a6"));
-ULONG RouteIntToCpu(ULONG irq asm("d0"), UBYTE cpu asm("d1"), struct GIC_Base *gicBase asm("a6"));
-ULONG UnrouteIntFromCpu(ULONG irq asm("d0"), UBYTE cpu asm("d1"), struct GIC_Base *gicBase asm("a6"));
+LONG SetIntTriggerEdge(ULONG irq asm("d0"), struct GIC_Base *gicBase asm("a6"));
+LONG SetIntTriggerLevel(ULONG irq asm("d0"), struct GIC_Base *gicBase asm("a6"));
+LONG RouteIntToCpu(ULONG irq asm("d0"), UBYTE cpu asm("d1"), struct GIC_Base *gicBase asm("a6"));
+LONG UnrouteIntFromCpu(ULONG irq asm("d0"), UBYTE cpu asm("d1"), struct GIC_Base *gicBase asm("a6"));
 LONG QueryIntRoute(ULONG irq asm("d0"), struct GIC_Base *gicBase asm("a6"));
-ULONG SetIntPending(ULONG irq asm("d0"), struct GIC_Base *gicBase asm("a6"));
-ULONG ClearIntPending(ULONG irq asm("d0"), struct GIC_Base *gicBase asm("a6"));
-ULONG SetIntActive(ULONG irq asm("d0"), struct GIC_Base *gicBase asm("a6"));
-ULONG ClearIntActive(ULONG irq asm("d0"), struct GIC_Base *gicBase asm("a6"));
-ULONG SetPriorityMask(UBYTE mask asm("d0"), struct GIC_Base *gicBase asm("a6"));
+LONG SetIntPending(ULONG irq asm("d0"), struct GIC_Base *gicBase asm("a6"));
+LONG ClearIntPending(ULONG irq asm("d0"), struct GIC_Base *gicBase asm("a6"));
+LONG SetIntActive(ULONG irq asm("d0"), struct GIC_Base *gicBase asm("a6"));
+LONG ClearIntActive(ULONG irq asm("d0"), struct GIC_Base *gicBase asm("a6"));
+LONG SetPriorityMask(UBYTE mask asm("d0"), struct GIC_Base *gicBase asm("a6"));
 LONG GetPriorityMask(struct GIC_Base *gicBase asm("a6"));
 LONG GetRunningPriority(struct GIC_Base *gicBase asm("a6"));
 LONG GetHighestPending(struct GIC_Base *gicBase asm("a6"));
 LONG GetControllerInfo(struct GICInfo *info asm("a1"), struct GIC_Base *gicBase asm("a6"));
 
 /* Internal function prototypes and macros */
+s32 gic400_init(struct GIC_Base *gicBase);
+void gic400_shutdown(struct GIC_Base *gicBase);
+
 #define gicc_set_ctlr(ctlr_value) mmio_write32((ctlr_value), GICC_CTLR)
 #define gicc_get_ctlr() mmio_read32(GICC_CTLR)
 #define gicc_set_priority_mask(priority_value) mmio_write32((priority_value), GICC_PMR)
@@ -171,7 +170,7 @@ LONG GetControllerInfo(struct GICInfo *info asm("a1"), struct GIC_Base *gicBase 
 #define gicc_get_running_priority() (mmio_read32(GICC_RPR) & 0xFF)
 #define gicc_get_highest_pending() (mmio_read32(GICC_HPPIR) & 0x3FF)
 
-static inline void gicc_print_info(ULONG gicc_iidr)
+static inline void gicc_print_info(u32 gicc_iidr)
 {
     Kprintf("[gic] Controller: Implementer=0x%03lx, Revision=%ld, Architecture=%ld, ProductID=0x%03lx\n",
             GICC_IIDR_IMPLEMENTER(gicc_iidr),
@@ -180,7 +179,7 @@ static inline void gicc_print_info(ULONG gicc_iidr)
             GICC_IIDR_PRODUCT_ID(gicc_iidr));
 }
 
-static inline void gicc_log_ctlr(CONST_STRPTR label, ULONG ctlr)
+static inline void gicc_log_ctlr(CONST_STRPTR label, u32 ctlr)
 {
     Kprintf("[gic] %s GICC_CTLR=0x%08lx: enable_grp1=%ld, fiq_bypass_dis_grp1=%ld, irq_bypass_dis_grp1=%ld, eoi_mode_ns=%ld\n",
             label,
@@ -191,7 +190,7 @@ static inline void gicc_log_ctlr(CONST_STRPTR label, ULONG ctlr)
             GICC_CTLR_FLAG(ctlr, GICC_CTLR_EOI_MODE_NS));
 }
 
-static inline void gicc_get_priority_mask(struct GIC_Base *gicBase, UBYTE *priority)
+static inline void gicc_get_priority_mask(struct GIC_Base *gicBase, u8 *priority)
 {
     if (!gicBase || !priority)
         return;
@@ -202,21 +201,21 @@ static inline void gicc_get_priority_mask(struct GIC_Base *gicBase, UBYTE *prior
 void gicd_print_info(struct GIC_Base *gicBase);
 void gicd_enable(struct GIC_Base *gicBase);
 void gicd_disable(struct GIC_Base *gicBase);
-BOOL gicd_get_irq_status(struct GIC_Base *gicBase, ULONG irq);
-BOOL gicd_is_pending(struct GIC_Base *gicBase, ULONG irq);
-void gicd_set_pending(struct GIC_Base *gicBase, ULONG irq);
-void gicd_clear_pending(struct GIC_Base *gicBase, ULONG irq);
-BOOL gicd_is_active(struct GIC_Base *gicBase, ULONG irq);
-BOOL gicd_is_enabled(struct GIC_Base *gicBase, ULONG irq);
-void gicd_enable_irq(struct GIC_Base *gicBase, ULONG irq);
-void gicd_disable_irq(struct GIC_Base *gicBase, ULONG irq);
-UBYTE gicd_get_priority(struct GIC_Base *gicBase, ULONG irq);
-void gicd_set_priority(struct GIC_Base *gicBase, ULONG irq, UBYTE priority);
-BOOL gicd_is_cpu_enabled(struct GIC_Base *gicBase, ULONG irq, UBYTE cpu);
-void gicd_set_cpu(struct GIC_Base *gicBase, ULONG irq, UBYTE cpu, BOOL enable);
-void gicd_set_trigger(struct GIC_Base *gicBase, ULONG irq, BOOL edge);
-void gicd_set_active(struct GIC_Base *gicBase, ULONG irq);
-void gicd_clear_active(struct GIC_Base *gicBase, ULONG irq);
-UBYTE gicd_get_cpu_mask(struct GIC_Base *gicBase, ULONG irq);
+BOOL gicd_get_irq_status(struct GIC_Base *gicBase, u32 irq);
+BOOL gicd_is_pending(struct GIC_Base *gicBase, u32 irq);
+void gicd_set_pending(struct GIC_Base *gicBase, u32 irq);
+void gicd_clear_pending(struct GIC_Base *gicBase, u32 irq);
+BOOL gicd_is_active(struct GIC_Base *gicBase, u32 irq);
+BOOL gicd_is_enabled(struct GIC_Base *gicBase, u32 irq);
+void gicd_enable_irq(struct GIC_Base *gicBase, u32 irq);
+void gicd_disable_irq(struct GIC_Base *gicBase, u32 irq);
+u8 gicd_get_priority(struct GIC_Base *gicBase, u32 irq);
+void gicd_set_priority(struct GIC_Base *gicBase, u32 irq, u8 priority);
+BOOL gicd_is_cpu_enabled(struct GIC_Base *gicBase, u32 irq, u8 cpu);
+void gicd_set_cpu(struct GIC_Base *gicBase, u32 irq, u8 cpu, BOOL enable);
+void gicd_set_trigger(struct GIC_Base *gicBase, u32 irq, BOOL edge);
+void gicd_set_active(struct GIC_Base *gicBase, u32 irq);
+void gicd_clear_active(struct GIC_Base *gicBase, u32 irq);
+u8 gicd_get_cpu_mask(struct GIC_Base *gicBase, u32 irq);
 
 #endif /* _GIC400_PRIVATE_H */

@@ -5,7 +5,7 @@
 
 #include <gic400_private.h>
 
-int __attribute__((used, no_reorder)) doNotExecute()
+LONG __attribute__((used, no_reorder)) doNotExecute(void)
 {
     return -1;
 }
@@ -59,7 +59,7 @@ struct Library *LibInit(struct Library *base asm("d0"), ULONG seglist asm("a0"),
     gicBase->segList = seglist;
     gicBase->libNode.lib_Revision = LIBRARY_REVISION;
 
-    int res = gic400_init(gicBase);
+    s32 res = gic400_init(gicBase);
     if (res != 0)
     {
         Kprintf("[gic] %s: Failed to initialize GIC-400 library\n", __func__);
