@@ -35,7 +35,7 @@ void gicd_disable(struct GIC_Base *gicBase)
 {
     // clear enable bit in GICD_CTLR
     u32 reg = mmio_read32(GICD_CTLR);
-    reg &= ~1;
+    reg &= ~1u;
     mmio_write32(reg, GICD_CTLR);
 }
 
@@ -181,8 +181,8 @@ void gicd_set_priority(struct GIC_Base *gicBase, u32 irq, u8 priority)
     u32 reg_index = irq >> 2;
     u32 byte_offset = irq & 0x03;
     u32 reg = mmio_read32(GICD_IPRIORITYR(reg_index));
-    reg &= ~(0xFF << (byte_offset * 8));
-    reg |= (priority & 0xFF) << (byte_offset * 8);
+    reg &= ~((u32)0xFF << (byte_offset * 8));
+    reg |= ((u32)priority & 0xFF) << (byte_offset * 8);
     mmio_write32(reg, GICD_IPRIORITYR(reg_index));
 }
 
@@ -224,13 +224,13 @@ void gicd_set_cpu(struct GIC_Base *gicBase, u32 irq, u8 cpu, BOOL enable)
     u32 reg_index = irq >> 2;
     u32 byte_offset = irq & 0x03;
     u32 reg = mmio_read32(GICD_ITARGETSR(reg_index));
-    u8 target = (reg >> (byte_offset * 8)) & 0xFF;
+    u8 target = (reg >> (byte_offset * 8)) & 0xFFu;
     if (enable)
-        target |= (u8)1 << cpu;
+        target |= (u8)(1u << cpu);
     else
-        target &= ~((u8)1 << cpu);
-    reg &= ~(0xFF << (byte_offset * 8));
-    reg |= (target & 0xFF) << (byte_offset * 8);
+        target &= (u8)~(1u << cpu);
+    reg &= ~(0xFFu << (byte_offset * 8));
+    reg |= (u32)target << (byte_offset * 8);
     mmio_write32(reg, GICD_ITARGETSR(reg_index));
 }
 

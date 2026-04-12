@@ -5,6 +5,7 @@
 
 #include <gic400_private.h>
 
+LONG __attribute__((used, no_reorder)) doNotExecute(void);
 LONG __attribute__((used, no_reorder)) doNotExecute(void)
 {
     return -1;
@@ -45,19 +46,19 @@ static ULONG LibExpunge(struct GIC_Base *gicBase asm("a6"))
     Permit();
 
     /* Calculate size of library base and deallocate memory */
-    ULONG size = gicBase->libNode.lib_NegSize + gicBase->libNode.lib_PosSize;
+    ULONG size = (ULONG)gicBase->libNode.lib_NegSize + gicBase->libNode.lib_PosSize;
     FreeMem((APTR)((ULONG)gicBase - gicBase->libNode.lib_NegSize), size);
 
     return segList;
 }
 
-struct Library *LibInit(struct Library *base asm("d0"), ULONG seglist asm("a0"), struct ExecBase *execBase asm("a6"))
+static struct Library *LibInit(struct Library *base asm("d0"), ULONG seglist asm("a0"), struct ExecBase *execBase asm("a6"))
 {
     struct GIC_Base *gicBase = (struct GIC_Base *)base;
     (void)execBase;
 
     gicBase->segList = seglist;
-    gicBase->libNode.lib_Revision = LIBRARY_REVISION;
+    gicBase->libNode.lib_Revision = (UWORD)LIBRARY_REVISION;
 
     s32 res = gic400_init(gicBase);
     if (res != 0)
@@ -65,7 +66,7 @@ struct Library *LibInit(struct Library *base asm("d0"), ULONG seglist asm("a0"),
         Kprintf("[gic] %s: Failed to initialize GIC-400 library\n", __func__);
 
         /* Calculate size of library base and deallocate memory */
-        ULONG size = gicBase->libNode.lib_NegSize + gicBase->libNode.lib_PosSize;
+        ULONG size = (ULONG)gicBase->libNode.lib_NegSize + gicBase->libNode.lib_PosSize;
         FreeMem((APTR)((ULONG)gicBase - gicBase->libNode.lib_NegSize), size);
 
         return NULL;
@@ -80,7 +81,7 @@ static struct GIC_Base *LibOpen(ULONG version asm("d0"), struct GIC_Base *gicBas
 {
     (void)version;
     gicBase->libNode.lib_OpenCnt++;
-    gicBase->libNode.lib_Flags &= ~LIBF_DELEXP;
+    gicBase->libNode.lib_Flags &= (UBYTE)~LIBF_DELEXP;
     return gicBase;
 }
 
