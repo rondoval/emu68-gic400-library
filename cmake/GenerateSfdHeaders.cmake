@@ -21,7 +21,7 @@ file(MAKE_DIRECTORY ${OUTPUT_DIR}/proto)
 
 function(generate_sfd_header mode output_file)
     execute_process(
-        COMMAND ${SFDC_EXECUTABLE} --addvectors library --target m68k-amigaos --mode ${mode} ${SFD_FILE}
+        COMMAND ${SFDC_EXECUTABLE} --addvectors none --target m68k-amigaos --mode ${mode} ${SFD_FILE}
         OUTPUT_FILE ${output_file}
         RESULT_VARIABLE result
     )
