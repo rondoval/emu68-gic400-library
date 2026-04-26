@@ -98,9 +98,9 @@ static s32 gic400_parse_devicetree(struct GIC_Base *gicBase)
         return GIC400_ERR_DEVTREE;
     }
 
-    Kprintf("[gic] %s: compatible: %s\n", __func__, gic_compatible);
-    Kprintf("[gic] %s: Distributor register base: %08lx\n", __func__, gicBase->gic_base_distributor);
-    Kprintf("[gic] %s: CPU Interface register base: %08lx\n", __func__, gicBase->gic_base_cpuif);
+    KprintfH("[gic] %s: compatible: %s\n", __func__, gic_compatible);
+    KprintfH("[gic] %s: Distributor register base: %08lx\n", __func__, gicBase->gic_base_distributor);
+    KprintfH("[gic] %s: CPU Interface register base: %08lx\n", __func__, gicBase->gic_base_cpuif);
 
     // We're done with the device tree
     DT_CloseKey(gic_key);
@@ -137,8 +137,10 @@ s32 gic400_init(struct GIC_Base *gicBase)
         return GIC400_ERR_NO_MEMORY;
     }
 
+#ifdef DEBUG_HIGH
     gicc_print_info(gicBase->gicc_iidr);
     gicd_print_info(gicBase);
+#endif
 
     Disable();
 
@@ -162,7 +164,9 @@ s32 gic400_init(struct GIC_Base *gicBase)
     gicc_set_ctlr(ctlr);
 
     ctlr = gicc_get_ctlr();
+#ifdef DEBUG_HIGH
     gicc_log_ctlr((CONST_STRPTR) "Final", ctlr);
+#endif
 
     gicd_enable(gicBase);
 
@@ -172,7 +176,7 @@ s32 gic400_init(struct GIC_Base *gicBase)
     gicBase->dispatcher_interrupt.is_Data = gicBase;
     gicBase->dispatcher_interrupt.is_Code = (APTR)gic400_exec_dispatcher;
     AddIntServer(INTB_EXTER, &gicBase->dispatcher_interrupt);
-    Kprintf("[gic] dispatcher installed on INTB_EXTER\n");
+    KprintfH("[gic] dispatcher installed on INTB_EXTER\n");
     Enable();
 
     return 0;
@@ -204,7 +208,7 @@ void gic400_shutdown(struct GIC_Base *gicBase)
     gicBase->handler_count = 0;
 
     Enable();
-    Kprintf("[gic] dispatcher removed from INTB_EXTER\n");
+    KprintfH("[gic] dispatcher removed from INTB_EXTER\n");
 
     if (gicBase->handlers)
     {
