@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14.0)
-project(gic400.library VERSION 1.3.0)
+project(gic400.library VERSION 1.4.0)
 
 # Version string
 string(TIMESTAMP CURRENT_DATE "(%d.%m.%Y)")

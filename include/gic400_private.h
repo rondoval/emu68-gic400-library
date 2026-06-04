@@ -45,7 +45,7 @@
 #endif
 
 #ifndef LIBRARY_PRIORITY
-#define LIBRARY_PRIORITY 0
+#define LIBRARY_PRIORITY 126
 #endif
 
 /* GIC Base structure */
