@@ -109,6 +109,9 @@ target_link_libraries(gic400_library
         Emu68Common::common
 )
 
+# ROM-able: no writable .data/.bss may sneak in (see driver-stack TODO.md)
+emu68_rom_check(gic400_library)
+
 set_target_properties(gic400_library PROPERTIES
     OUTPUT_NAME gic400
     SUFFIX ".library"
