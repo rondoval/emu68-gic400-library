@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14.0)
-project(gic400.library VERSION 1.3.0)
+project(gic400.library VERSION 1.4.0)
 
 # Version string
 string(TIMESTAMP CURRENT_DATE "(%d.%m.%Y)")
@@ -108,6 +108,9 @@ target_link_libraries(gic400_library
     PRIVATE
         Emu68Common::common
 )
+
+# ROM-able: no writable .data/.bss may sneak in (see driver-stack TODO.md)
+emu68_rom_check(gic400_library)
 
 set_target_properties(gic400_library PROPERTIES
     OUTPUT_NAME gic400
