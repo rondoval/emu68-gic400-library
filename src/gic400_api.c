@@ -333,6 +333,9 @@ LONG SetIntTriggerLevel(ULONG irq asm("d0"), struct GIC_Base *gicBase asm("a6"))
 
 static s32 gic400_validate_cpu_target(const char *caller, u32 irq, u8 cpu)
 {
+#ifndef DEBUG
+    (void)caller; /* only referenced by debug logging */
+#endif
     if (cpu >= 8)
     {
         Kprintf("[gic] %s: CPU index %lu is out of range\n", caller, (ULONG)cpu);

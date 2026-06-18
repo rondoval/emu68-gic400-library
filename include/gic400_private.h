@@ -170,6 +170,8 @@ void gic400_shutdown(struct GIC_Base *gicBase);
 #define gicc_get_running_priority() (mmio_read32(GICC_RPR) & 0xFF)
 #define gicc_get_highest_pending() (mmio_read32(GICC_HPPIR) & 0x3FF)
 
+/* Debug-print helpers (their callers are DEBUG_HIGH-guarded). */
+#ifdef DEBUG
 static inline void gicc_print_info(u32 gicc_iidr)
 {
     Kprintf("[gic] Controller: Implementer=0x%03lx, Revision=%ld, Architecture=%ld, ProductID=0x%03lx\n",
@@ -189,6 +191,7 @@ static inline void gicc_log_ctlr(CONST_STRPTR label, u32 ctlr)
             GICC_CTLR_FLAG(ctlr, GICC_CTLR_IRQ_BYPASS_DIS_GRP1),
             GICC_CTLR_FLAG(ctlr, GICC_CTLR_EOI_MODE_NS));
 }
+#endif /* DEBUG (gicc_print_info / gicc_log_ctlr) */
 
 static inline void gicc_get_priority_mask(struct GIC_Base *gicBase, u8 *priority)
 {
@@ -198,7 +201,9 @@ static inline void gicc_get_priority_mask(struct GIC_Base *gicBase, u8 *priority
     *priority = mmio_read32(GICC_PMR) & 0xFF;
 }
 
+#ifdef DEBUG
 void gicd_print_info(struct GIC_Base *gicBase);
+#endif
 void gicd_enable(struct GIC_Base *gicBase);
 void gicd_disable(struct GIC_Base *gicBase);
 BOOL gicd_get_irq_status(struct GIC_Base *gicBase, u32 irq);
