@@ -57,7 +57,7 @@ add_compile_definitions(
 )
 
 add_compile_options(
-    -Os
+    -O3
     -m68040
     -fomit-frame-pointer
     -Wall
