@@ -1,5 +1,10 @@
 # emu68-gic400-library
 
+> **Releases:** this component ships as part of the
+> [emu68-driver-stack](https://github.com/rondoval/emu68-driver-stack) — the downloadable
+> `.lha` and bundled documentation are published there. This repository is source-only
+> and versioned via git tags.
+
 *warning, this description is LLM generated :)*
 
 **emu68-gic400-library** is a shared AmigaOS 3.x library that exposes the Arm GIC-400 interrupt controller used by Raspberry Pi 4 systems. It is designed to be consumed by drivers such as `genet.device`, consolidating interrupt routing logic in a reusable component.
