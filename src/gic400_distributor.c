@@ -5,6 +5,7 @@
  * Args: none.
  * Returns: void.
  */
+#ifdef DEBUG
 void gicd_print_info(struct GIC_Base *gicBase)
 {
     u32 iidr = gicBase->gicd_iidr;
@@ -18,6 +19,7 @@ void gicd_print_info(struct GIC_Base *gicBase)
             GICD_TYPER_SECURITY_EXTN(typer),
             GICD_TYPER_LSPI(typer));
 }
+#endif /* DEBUG (gicd_print_info) */
 
 /* gicd_enable_group: Enable forwarding of pending interrupts from the Distributor to the CPU interface
  */
