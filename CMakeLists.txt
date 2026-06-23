@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.14.0)
-project(gic400.library VERSION 1.4.0)
+project(gic400.library VERSION 1.5)
 
 # Version string
 string(TIMESTAMP CURRENT_DATE "(%d.%m.%Y)")
-set(VERSTRING "$VER: ${PROJECT_NAME} ${PROJECT_VERSION} ${CURRENT_DATE}")
+set(VERSTRING "$VER: ${PROJECT_NAME} ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR} ${CURRENT_DATE}")
 string(REGEX REPLACE "\\.library$" "" LIBRARY_BASENAME "${PROJECT_NAME}")
 
 # Find SFDC tool
