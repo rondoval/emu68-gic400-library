@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14.0)
-project(gic400.library VERSION 1.5)
+project(gic400.library VERSION 1.6)
 
 # Version string
 string(TIMESTAMP CURRENT_DATE "(%d.%m.%Y)")
@@ -70,7 +70,7 @@ add_compile_options(
 )
 
 # Debug-output backend defines (EMU68_DEBUG_BACKEND, see emu68-common).
-emu68_debug_backend_definitions()
+emu68_debug_definitions()
 
 add_link_options(
     -ffreestanding

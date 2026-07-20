@@ -1,3 +1,29 @@
+# Release notes — gic400.library 1.6
+
+Changes since v1.5.
+
+---
+
+## Breaking changes
+
+None.
+
+---
+
+## Improvements / Maintenance
+
+### Debug output follows emu68-common's tier ladder
+
+The library's debug-only helpers now gate on `TRACE` instead of the old
+`DEBUG`/`DEBUG_HIGH` split, and log through `KprintfT` instead of `Kprintf`/
+`KprintfH`, matching emu68-common's cumulative `PROFILE`/`DEBUG`/`TRACE` tier
+system. The build calls `emu68_debug_definitions()` (renamed from
+`emu68_debug_backend_definitions()`); `emu68_debug_backend_finalize()` is
+unchanged. No behavior change for consumers — the `EMU68_DEBUG_BACKEND`
+selection (`pistorm` | `serial` | `off`) still works the same way.
+
+---
+
 # Release notes — gic400.library 1.5
 
 Changes since v1.4.

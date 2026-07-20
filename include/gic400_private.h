@@ -170,11 +170,10 @@ void gic400_shutdown(struct GIC_Base *gicBase);
 #define gicc_get_running_priority() (mmio_read32(GICC_RPR) & 0xFF)
 #define gicc_get_highest_pending() (mmio_read32(GICC_HPPIR) & 0x3FF)
 
-/* Debug-print helpers (their callers are DEBUG_HIGH-guarded). */
-#ifdef DEBUG
+#ifdef TRACE
 static inline void gicc_print_info(u32 gicc_iidr)
 {
-    Kprintf("[gic] Controller: Implementer=0x%03lx, Revision=%ld, Architecture=%ld, ProductID=0x%03lx\n",
+    KprintfT("[gic] Controller: Implementer=0x%03lx, Revision=%ld, Architecture=%ld, ProductID=0x%03lx\n",
             GICC_IIDR_IMPLEMENTER(gicc_iidr),
             GICC_IIDR_REVISION(gicc_iidr),
             GICC_IIDR_ARCHITECTURE(gicc_iidr),
@@ -183,7 +182,7 @@ static inline void gicc_print_info(u32 gicc_iidr)
 
 static inline void gicc_log_ctlr(CONST_STRPTR label, u32 ctlr)
 {
-    Kprintf("[gic] %s GICC_CTLR=0x%08lx: enable_grp1=%ld, fiq_bypass_dis_grp1=%ld, irq_bypass_dis_grp1=%ld, eoi_mode_ns=%ld\n",
+    KprintfT("[gic] %s GICC_CTLR=0x%08lx: enable_grp1=%ld, fiq_bypass_dis_grp1=%ld, irq_bypass_dis_grp1=%ld, eoi_mode_ns=%ld\n",
             label,
             ctlr,
             GICC_CTLR_FLAG(ctlr, GICC_CTLR_ENABLE_GRP1),
@@ -191,7 +190,7 @@ static inline void gicc_log_ctlr(CONST_STRPTR label, u32 ctlr)
             GICC_CTLR_FLAG(ctlr, GICC_CTLR_IRQ_BYPASS_DIS_GRP1),
             GICC_CTLR_FLAG(ctlr, GICC_CTLR_EOI_MODE_NS));
 }
-#endif /* DEBUG (gicc_print_info / gicc_log_ctlr) */
+#endif /* TRACE (gicc_print_info / gicc_log_ctlr) */
 
 static inline void gicc_get_priority_mask(struct GIC_Base *gicBase, u8 *priority)
 {
@@ -201,7 +200,7 @@ static inline void gicc_get_priority_mask(struct GIC_Base *gicBase, u8 *priority
     *priority = mmio_read32(GICC_PMR) & 0xFF;
 }
 
-#ifdef DEBUG
+#ifdef TRACE
 void gicd_print_info(struct GIC_Base *gicBase);
 #endif
 void gicd_enable(struct GIC_Base *gicBase);

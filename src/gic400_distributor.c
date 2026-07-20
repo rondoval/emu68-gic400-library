@@ -5,21 +5,21 @@
  * Args: none.
  * Returns: void.
  */
-#ifdef DEBUG
+#ifdef TRACE
 void gicd_print_info(struct GIC_Base *gicBase)
 {
     u32 iidr = gicBase->gicd_iidr;
-    Kprintf("[gic] Distributor: Implementer=0x%03lx, Revision=%ld, Variant=%ld, ProductID=0x%02lx\n",
+    KprintfT("[gic] Distributor: Implementer=0x%03lx, Revision=%ld, Variant=%ld, ProductID=0x%02lx\n",
             GICD_IIDR_IMPLEMENTER(iidr), GICD_IIDR_REVISION(iidr), GICD_IIDR_VARIANT(iidr), GICD_IIDR_PRODUCT_ID(iidr));
 
     u32 typer = gicBase->gicd_typer;
-    Kprintf("[gic] Distributor: ITLinesNumber=%ld, CPUNumber=%ld, SecurityExtensions=%ld, LSPIs=%ld\n",
+    KprintfT("[gic] Distributor: ITLinesNumber=%ld, CPUNumber=%ld, SecurityExtensions=%ld, LSPIs=%ld\n",
             (GICD_TYPER_IT_LINES_NUMBER(typer) + 1) * 32,
             GICD_TYPER_CPUS_NUMBER(typer) + 1,
             GICD_TYPER_SECURITY_EXTN(typer),
             GICD_TYPER_LSPI(typer));
 }
-#endif /* DEBUG (gicd_print_info) */
+#endif /* TRACE (gicd_print_info) */
 
 /* gicd_enable_group: Enable forwarding of pending interrupts from the Distributor to the CPU interface
  */
