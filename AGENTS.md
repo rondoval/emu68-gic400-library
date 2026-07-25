@@ -9,18 +9,17 @@
 ## Build
 
 - `devicetree.resource` and `emu68-common` must be installed first.
-- Preferred commands:
-  - `cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain.cmake -DCMAKE_PREFIX_PATH=/path/to/emu68-driver-stack -DCMAKE_INSTALL_PREFIX=/path/to/emu68-driver-stack`
-  - `cmake --build build`
-  - `cmake --install build`
-- Debug backend: pass `-DEMU68_DEBUG_BACKEND=serial` (default `pistorm` | `serial` | `off`); selected stack-wide via `emu68-common`, `serial` links `debug.lib` and is not ROM-able.
+- Build through the superbuild's container wrapper — never host `cmake` (build trees
+  are configured at `/work` inside the toolchain container):
+  - from the `emu68-driver-stack` superbuild root: `./scripts/docker-build.sh --target emu68-gic400-library`
+- Debug backend: `EMU68_CONFIGURE_ARGS="-DEMU68_DEBUG_BACKEND=serial" ./scripts/docker-build.sh` (default `pistorm` | `serial` | `off`); selected stack-wide via `emu68-common`, `serial` links `debug.lib` and is not ROM-able.
 - The SFD-derived headers are generated during the build. Do not add a manual `sfd/make.sh` step.
 - `gic400.library` now consumes shared helpers from `emu68-common`, so make sure `Emu68Common` is available in the configured prefix.
 
 ## Code Handling
 
 - Preserve the Amiga library API shape and generated header flow.
-- Be careful with changes that affect interrupt enable or teardown paths; the README notes a known soft-reset hang if interrupts were enabled.
+- Be careful with changes that affect interrupt enable or teardown paths; the library has no reset hook of its own, so consumers (e.g. `genet.device`) are responsible for quiescing their interrupts before a soft reset via `emu68-common`'s `reset_guard`.
 - If you change exported prototypes or generated headers, expect downstream rebuilds for `emu68-pcie-library` and `emu68-genet-driver`.
 
 ## Validation
