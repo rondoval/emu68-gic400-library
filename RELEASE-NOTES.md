@@ -1,3 +1,27 @@
+# Release notes — gic400.library 1.7
+
+Changes since v1.6.
+
+---
+
+## Breaking changes
+
+None.
+
+---
+
+## Build & tooling
+
+### GCC 16.1 build portability
+
+`gic400.library` now builds cleanly under GCC 16.1. No behavior change:
+
+- `-ffreestanding` moved from link options to compile options, where it
+  actually affects code generation — as a link-only flag it was silently
+  inert.
+
+---
+
 # Release notes — gic400.library 1.6
 
 Changes since v1.5.
