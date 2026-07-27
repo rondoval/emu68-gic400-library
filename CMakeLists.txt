@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14.0)
-project(gic400.library VERSION 1.6)
+project(gic400.library VERSION 1.7)
 
 # Version string
 string(TIMESTAMP CURRENT_DATE "(%d.%m.%Y)")
@@ -60,6 +60,7 @@ add_compile_options(
     -O3
     -m68040
     -fomit-frame-pointer
+    -ffreestanding
     -Wall
     -Wextra
     -Wconversion
@@ -73,7 +74,6 @@ add_compile_options(
 emu68_debug_definitions()
 
 add_link_options(
-    -ffreestanding
     -nostdlib
     -nostartfiles
     -Wall
