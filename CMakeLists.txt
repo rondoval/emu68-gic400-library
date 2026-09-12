@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14.0)
-project(gic400.library VERSION 1.7)
+project(gic400.library VERSION 1.8)
 
 # Version string
 string(TIMESTAMP CURRENT_DATE "(%d.%m.%Y)")
@@ -56,10 +56,11 @@ add_compile_definitions(
         LIBRARY_NAME="${PROJECT_NAME}"
 )
 
+# CPU/FPU/frame-pointer flags come from the stack toolchain (cmake/toolchain.cmake,
+# knobs M68K_CPU / M68K_FPU) and must not be repeated here: a hardcoded -m68040 is
+# emitted after CMAKE_C_FLAGS and would silently override M68K_CPU.
 add_compile_options(
     -O3
-    -m68040
-    -fomit-frame-pointer
     -ffreestanding
     -Wall
     -Wextra

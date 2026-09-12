@@ -1,3 +1,32 @@
+# Release notes — gic400.library 1.8
+
+Changes since v1.7.
+
+---
+
+## Breaking changes
+
+None.
+
+---
+
+## Improvements / Maintenance
+
+### Can be built into a custom Kickstart ROM
+
+The library can now be embedded in a Kickstart image; before, it would not have
+come up there. No change when it is installed to `LIBS:` or taken from Emu68's
+own board ROM, which is how it is normally used.
+
+---
+
+## Build & tooling
+
+- Hardcoded `-m68040` removed — it overrode the toolchain's `M68K_CPU`, so
+  non-68040 builds produced 68040 code.
+
+---
+
 # Release notes — gic400.library 1.7
 
 Changes since v1.6.
