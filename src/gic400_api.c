@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0 OR GPL-2.0+
+#include <stddef.h>
 #include <exec/memory.h>
 #include <strutil.h>
 #include <gic400_private.h>
@@ -9,7 +10,7 @@
 static const char gic_dispatcher_name[] = "ARM GIC-400 dispatcher";
 
 /* forward declarations */
-static ULONG gic400_exec_dispatcher(register struct GIC_Base *gicBase asm("a1"));
+extern ULONG gic400_exec_dispatcher(void); /* asm, see below */
 static void gic400_disable_irq(struct GIC_Base *gicBase, u32 irq);
 
 static s32 gic400_validate_irq(struct GIC_Base *gicBase, u32 irq)
@@ -126,6 +127,11 @@ s32 gic400_init(struct GIC_Base *gicBase)
     gicBase->gicc_iidr = mmio_read32(GICC_IIDR);
 
     gicBase->max_irqs = (GICD_TYPER_IT_LINES_NUMBER(gicBase->gicd_typer) + 1) * 32;
+    /* IDs 1020-1023 are never real interrupts (GICv2: 1020/1021 reserved,
+     * 1022/1023 spurious); the dispatcher relies on max_irqs <= 1020 to
+     * reject the spurious IDs with its single range check. */
+    if (gicBase->max_irqs > 1020)
+        gicBase->max_irqs = 1020;
 
     gicBase->handler_count = 0;
     gicBase->handlers = NULL;
@@ -508,65 +514,81 @@ LONG GetControllerInfo(struct GICInfo *info asm("a1"), struct GIC_Base *gicBase 
     return 0;
 }
 
-/* gic400_call_interrupt: Invoke interrupt server with Exec ABI.
- * Args: interrupt - Exec interrupt entry; irq - source IRQ number.
- * Returns: void.
+/* gic400_exec_dispatcher: the EXTER server Exec calls, in assembly so the
+ * Exec server ABI is explicit rather than left to the compiler: A1 = is_Data
+ * (gicBase); D0/D1/A0/A1/A5/A6 scratch; everything else preserved; return
+ * with Z set to let the chain go on (AddIntServer autodoc - Exec tests the
+ * flag, not D0).  Struct offsets come from offsetof() via "i" operands.
+ *
+ * Drains the CPU interface: acknowledge, run the server and EOI every pending
+ * IRQ in one INT6 pass.  Each IRQ left for another pass would cost a level-6
+ * exception plus Exec's INTENAR/INTREQR reads and INTREQ clear, all trapped
+ * Amiga-bus cycles; draining costs one IAR read that comes back spurious.
+ * Servers are called with the Exec server ABI plus D0 = IRQ number.
+ *
+ * max_irqs <= 1020 (gic400_init), so the single range check also
+ * rejects the spurious IDs 1022/1023, which must not be EOI'd.
+ *
+ * No barrier after the IAR read (as Linux GICv2): Device memory keeps the
+ * EOIR -> IAR order on the same peripheral and the value is consumed at once.
+ * The one barrier (NOP = dsb sy on Emu68) sits before the EOI so a server's
+ * device write that dropped a level source completes before the GIC samples
+ * the line again.
+ *
+ * Registers: A2 = GICC register base, A3 = handler table, A4 = SysBase, D2 = raw IAR,
+ * D3 = max_irqs - all callee-saved, so they survive the servers.
  */
-static inline void gic400_call_interrupt(struct Interrupt *interrupt, u32 irq)
-{
-    if (interrupt == NULL || interrupt->is_Code == NULL)
-        return;
-
-    __asm__ __volatile__(
-        "move.l %[sysbase],%%a6\n\t"
-        "move.l %[irq],%%d0\n\t"
-        "move.l %[data],%%a1\n\t"
-        "jsr (%[code])\n\t"
-        :
-        : [code] "a"(interrupt->is_Code),
-          [data] "r"(interrupt->is_Data),
-          [irq] "r"(irq),
-          [sysbase] "r"((struct ExecBase *)EXEC_BASE_NAME)
-        : "d0", "d1", "a0", "a1", "a5", "a6");
-}
-
-/* gic400_exec_dispatcher: Exec interrupt server for INTB_EXTER hook.
- * Args: none.
- * Returns: void.
- */
-static ULONG gic400_exec_dispatcher(register struct GIC_Base *gicBase asm("a1"))
-{
-    if (!gicBase)
-    {
-        KprintfT("[gic] %s: NULL GIC base\n", __func__);
-        return 0;
-    }
-
-    u32 iar = gicc_acknowledge_interrupt();
-    u32 irq = iar & 0x3FF;
-
-    if (irq == 0x3FF || irq == 0x3FE)
-    {
-        KprintfT("[gic] Spurious interrupt received (IAR=0x%08lx)\n", iar);
-        return 0; // No pending interrupts
-    }
-
-    if (irq >= gicBase->max_irqs)
-    {
-        gicc_end_interrupt(iar);
-        return 1;
-    }
-
-    struct Interrupt *interrupt = gicBase->handlers[irq];
-    if (interrupt)
-    {
-        KprintfT("[gic] Invoking handler for IRQ %ld\n", irq);
-        gic400_call_interrupt(interrupt, irq);
-    }
-
-    gicc_end_interrupt(iar);
-    return 1;
-}
+#ifndef __INTELLISENSE__ /* no file-scope extended asm there */
+__asm__(
+    "	.text\n"
+    "	.even\n"
+    "_gic400_exec_dispatcher:\n"
+    "	movem.l	%%d2-%%d3/%%a2-%%a4,-(%%sp)\n" /* our loop state must survive the servers */
+    "	movea.l	%c[cpuif](%%a1),%%a2\n"       /* A2 = gicBase->gic_base_cpuif (GICC regs) */
+    "	move.l	%c[max](%%a1),%%d3\n"         /* D3 = max_irqs (<= 1020) */
+    "	move.l	%c[iar](%%a2),%%d2\n"         /* ack: D2 = raw IAR (LE), kept for the EOI */
+    "	move.l	%%d2,%%d0\n"
+    "	swap	%%d0\n"                       /* LE b0 b1 b2 b3 -> b2 b3 b0 b1 */
+    "	ror.w	#8,%%d0\n"                    /* low word b0 b1 -> b1 b0 = IAR[15:0] */
+    "	andi.l	#0x3ff,%%d0\n"                /* D0 = interrupt ID */
+    "	cmp.l	%%d3,%%d0\n"
+    "	bcc.s	3f\n"                         /* ID >= max_irqs = 1022/1023 spurious: not ours */
+    "	movea.l	%c[handlers](%%a1),%%a3\n"    /* A3 = handler table */
+    "	movea.l	%c[sysbase](%%a1),%%a4\n"     /* A4 = SysBase (no $4 bus read) */
+    "1:	move.l	%%d0,%%d1\n"                  /* --- per IRQ: D0 = ID, D2 = raw IAR --- */
+    "	lsl.l	#2,%%d1\n"                    /* D1 = ID * sizeof(APTR) */
+    "	move.l	0(%%a3,%%d1.l),%%d1\n"        /* D1 = handlers[ID] */
+    "	beq.s	2f\n"                         /* none registered: just EOI */
+    "	movea.l	%%d1,%%a0\n"                  /* A0 = struct Interrupt */
+    "	movea.l	%c[data](%%a0),%%a1\n"        /* Exec server ABI: A1 = is_Data, */
+    "	movea.l	%c[code](%%a0),%%a5\n"        /* A5 = is_Code, */
+    "	movea.l	%%a4,%%a6\n"                  /* A6 = SysBase, D0 = IRQ number */
+    "	jsr	(%%a5)\n"                         /* may trash D0/D1/A0/A1/A5/A6 */
+    "2:	nop\n"                                /* dsb sy: server's device writes land first */
+    "	move.l	%%d2,%c[eoir](%%a2)\n"        /* EOI with the raw IAR value */
+    "	move.l	%c[iar](%%a2),%%d2\n"         /* ack the next one (same swap as above) */
+    "	move.l	%%d2,%%d0\n"
+    "	swap	%%d0\n"
+    "	ror.w	#8,%%d0\n"
+    "	andi.l	#0x3ff,%%d0\n"
+    "	cmp.l	%%d3,%%d0\n"
+    "	bcs.s	1b\n"                         /* another IRQ pending: stay in this pass */
+    "	movem.l	(%%sp)+,%%d2-%%d3/%%a2-%%a4\n" /* movem leaves the CCR alone... */
+    "	moveq	#1,%%d0\n"                    /* ...so this sets Z clear: handled, end chain */
+    "	rts\n"
+    "3:	movem.l	(%%sp)+,%%d2-%%d3/%%a2-%%a4\n"
+    "	moveq	#0,%%d0\n"                    /* Z set: not ours, Exec continues the chain */
+    "	rts\n"
+    :
+    : [cpuif] "i"(offsetof(struct GIC_Base, gic_base_cpuif)),
+      [max] "i"(offsetof(struct GIC_Base, max_irqs)),
+      [handlers] "i"(offsetof(struct GIC_Base, handlers)),
+      [sysbase] "i"(offsetof(struct GIC_Base, sysBase)),
+      [data] "i"(offsetof(struct Interrupt, is_Data)),
+      [code] "i"(offsetof(struct Interrupt, is_Code)),
+      [iar] "i"(0x00C),  /* GICC_IAR */
+      [eoir] "i"(0x010)); /* GICC_EOIR */
+#endif
 
 /* AddIntServerEx: Register interrupt server for given SPI.
  * Args:

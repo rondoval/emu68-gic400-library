@@ -53,6 +53,7 @@ struct GIC_Base
 {
     struct Library libNode;
     ULONG segList;
+    struct ExecBase *sysBase;
 
     struct SignalSemaphore semaphore;
 

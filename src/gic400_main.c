@@ -55,9 +55,9 @@ static ULONG LibExpunge(struct GIC_Base *gicBase asm("a6"))
 static struct Library *LibInit(struct Library *base asm("d0"), ULONG seglist asm("a0"), struct ExecBase *execBase asm("a6"))
 {
     struct GIC_Base *gicBase = (struct GIC_Base *)base;
-    (void)execBase;
 
     gicBase->segList = seglist;
+    gicBase->sysBase = execBase;
     gicBase->libNode.lib_Revision = (UWORD)LIBRARY_REVISION;
 
     s32 res = gic400_init(gicBase);
