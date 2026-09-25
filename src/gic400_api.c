@@ -38,6 +38,7 @@ static s32 gic400_validate_irq(struct GIC_Base *gicBase, u32 irq)
 
 static s32 gic400_parse_devicetree(struct GIC_Base *gicBase)
 {
+    struct ExecBase *SysBase = gicBase->sysBase;
     APTR DeviceTreeBase = OpenResource((CONST_STRPTR) "devicetree.resource");
     if (DeviceTreeBase == NULL)
     {
@@ -52,9 +53,9 @@ static s32 gic400_parse_devicetree(struct GIC_Base *gicBase)
         return GIC400_ERR_DEVTREE;
     }
 
-    const u32 gic_phandle = DT_GetPropertyValueULONG(root_key, "interrupt-parent", 1, FALSE);
+    const u32 gic_phandle = DT_GetPropertyValueULONG(SysBase, root_key, "interrupt-parent", 1, FALSE);
 
-    APTR gic_key = DT_FindByPHandle(root_key, gic_phandle);
+    APTR gic_key = DT_FindByPHandle(SysBase, root_key, gic_phandle);
     if (gic_key == NULL)
     {
         Kprintf("[gic] %s: Failed to find GIC key for handle %08lx\n", __func__, gic_phandle);
@@ -73,14 +74,14 @@ static s32 gic400_parse_devicetree(struct GIC_Base *gicBase)
     // TODO this is awful. rework DT_TranslateAddress
 
     const APTR parent_key = DT_GetParent(gic_key);
-    const u32 address_cells_parent = DT_GetPropertyValueULONG(parent_key, "#address-cells", 1, FALSE);
-    const u32 size_cells_parent = DT_GetPropertyValueULONG(parent_key, "#size-cells", 1, FALSE);
+    const u32 address_cells_parent = DT_GetPropertyValueULONG(SysBase, parent_key, "#address-cells", 1, FALSE);
+    const u32 size_cells_parent = DT_GetPropertyValueULONG(SysBase, parent_key, "#size-cells", 1, FALSE);
     const u32 cells_per_record = address_cells_parent + size_cells_parent;
 
     const u32 *value = DT_GetPropValue(DT_FindProperty(gic_key, (CONST_STRPTR) "reg"));
 
     gicBase->gic_base_distributor = (APTR)(ULONG)DT_GetNumber(value, address_cells_parent);
-    DT_TranslateAddress(&gicBase->gic_base_distributor, parent_key);
+    DT_TranslateAddress(SysBase, &gicBase->gic_base_distributor, parent_key);
     if (gicBase->gic_base_distributor == NULL)
     {
         Kprintf("[gic] %s: Failed to get Distributor base address for GIC\n", __func__);
@@ -90,7 +91,7 @@ static s32 gic400_parse_devicetree(struct GIC_Base *gicBase)
     }
 
     gicBase->gic_base_cpuif = (APTR)(ULONG)DT_GetNumber(value + cells_per_record, address_cells_parent);
-    DT_TranslateAddress(&gicBase->gic_base_cpuif, parent_key);
+    DT_TranslateAddress(SysBase, &gicBase->gic_base_cpuif, parent_key);
     if (gicBase->gic_base_cpuif == NULL)
     {
         Kprintf("[gic] %s: Failed to get CPU Interface base address for GIC\n", __func__);
@@ -117,6 +118,7 @@ s32 gic400_init(struct GIC_Base *gicBase)
 {
     if (!gicBase)
         return GIC400_ERR_NOT_READY;
+    struct ExecBase *SysBase = gicBase->sysBase;
 
     s32 ret = gic400_parse_devicetree(gicBase);
     if (ret < 0)
@@ -196,6 +198,7 @@ void gic400_shutdown(struct GIC_Base *gicBase)
 {
     if (!gicBase)
         return;
+    struct ExecBase *SysBase = gicBase->sysBase;
 
     Disable();
 
@@ -602,6 +605,7 @@ LONG AddIntServerEx(ULONG irq asm("d0"), UBYTE priority asm("d1"), BOOL edge asm
 {
     if (!gicBase)
         return GIC400_ERR_NOT_READY;
+    struct ExecBase *SysBase = gicBase->sysBase;
     if (!interrupt || !interrupt->is_Code)
     {
         Kprintf("[gic] Invalid interrupt server for IRQ %ld\n", irq);
@@ -644,6 +648,7 @@ LONG RemIntServerEx(ULONG irq asm("d0"), struct Interrupt *interrupt asm("a1"), 
 {
     if (!gicBase)
         return GIC400_ERR_NOT_READY;
+    struct ExecBase *SysBase = gicBase->sysBase;
     if (!interrupt)
     {
         Kprintf("[gic] Invalid interrupt server for IRQ %ld\n", irq);

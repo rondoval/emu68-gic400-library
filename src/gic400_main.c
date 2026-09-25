@@ -31,6 +31,7 @@ const struct Resident gicResident __attribute__((used)) = {
 
 static ULONG LibExpunge(struct GIC_Base *gicBase asm("a6"))
 {
+    struct ExecBase *SysBase = gicBase->sysBase;
     ULONG segList = gicBase->segList;
 
     if (gicBase->libNode.lib_OpenCnt > 0)
@@ -52,12 +53,12 @@ static ULONG LibExpunge(struct GIC_Base *gicBase asm("a6"))
     return segList;
 }
 
-static struct Library *LibInit(struct Library *base asm("d0"), ULONG seglist asm("a0"), struct ExecBase *execBase asm("a6"))
+static struct Library *LibInit(struct Library *base asm("d0"), ULONG seglist asm("a0"), struct ExecBase *SysBase asm("a6"))
 {
     struct GIC_Base *gicBase = (struct GIC_Base *)base;
 
     gicBase->segList = seglist;
-    gicBase->sysBase = execBase;
+    gicBase->sysBase = SysBase;
     gicBase->libNode.lib_Revision = (UWORD)LIBRARY_REVISION;
 
     s32 res = gic400_init(gicBase);
