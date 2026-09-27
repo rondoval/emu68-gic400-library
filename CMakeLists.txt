@@ -116,6 +116,10 @@ target_link_libraries(gic400_library
 # serial backend this instead links debug.lib (+ __divsi3 glue) and skips the check.
 emu68_debug_backend_finalize(gic400_library ROMABLE)
 
+# Exec interrupt servers answer with the Z flag, not D0 (exec.library/AddIntServer);
+# a compiler epilogue that ends in MOVE rather than MOVEM silently overwrites it.
+emu68_isr_z_check(gic400_library SERVERS gic400_exec_dispatcher)
+
 set_target_properties(gic400_library PROPERTIES
     OUTPUT_NAME gic400
     SUFFIX ".library"

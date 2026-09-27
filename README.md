@@ -25,6 +25,9 @@ This repository is dual-licensed under `MPL-2.0 OR GPL-2.0+`. File-level SPDX he
 ## Unimplemented / Planned Features
 
 - SGI related functions (currently focused on SPIs).
+- Multiple interrupt servers on one interrupt (chaining). Needed for the  PCIe INTx lines that
+  carry more than one function. [`interrupt-chaining.md`](interrupt-chaining.md) is the contract
+  an implementation has to satisfy and what it requires of an interrupt server.
 
 ## Requirements
 
