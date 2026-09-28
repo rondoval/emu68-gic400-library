@@ -24,9 +24,9 @@ are configured at `/work` inside the toolchain container), from the
 
 ## Code Handling
 
-- Implementation lives in `src/` (`gic400_main.c` library boilerplate/Resident, `gic400_distributor.c` GICD register helpers, `gic400_api.c` exported API + device-tree discovery, `gic400_end.c`). Exports are defined by `sfd/gic400.sfd`; private types are in `include/gic400_private.h` and the public struct in `include/libraries/gic400.h`.
+- Implementation lives in `src/` (`gic400_main.c` library boilerplate/Resident, `gic400_distributor.c` GICD register helpers, `gic400_api.c` exported API + device-tree discovery). Exports are defined by `sfd/gic400.sfd`; private types are in `include/gic400_private.h` and the public struct in `include/libraries/gic400.h`.
 - Preserve the Amiga library API shape and generated header flow.
-- The library is ROM-able: the linked binary must contain no writable `.data`/`.bss`, and `emu68_rom_check(gic400_library)` in `CMakeLists.txt` enforces this at build time. Keep mutable state in the allocated library base, not in globals.
+- The library is ROM-able: the linked binary must contain no writable `.data`/`.bss`, and the `ASSERT` in the shared module layout script that `emu68_module_layout(gic400_library)` applies enforces this at link time. Keep mutable state in the allocated library base, not in globals.
 - Be careful with changes that affect interrupt enable or teardown paths; the library has no reset hook of its own, so consumers (e.g. `genet.device`) are responsible for quiescing their interrupts before a soft reset via `emu68-common`'s `reset_guard`.
 - If you change exported prototypes or generated headers, expect downstream rebuilds for `emu68-pcie-library` and `emu68-genet-driver`.
 

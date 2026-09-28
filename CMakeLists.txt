@@ -80,7 +80,6 @@ add_link_options(
     -Wall
     -Wextra
     -s
-    -Wl,-e,_doNotExecute
 )
 
 # Targets
@@ -89,7 +88,7 @@ add_executable(gic400_library
     src/gic400_main.c
     src/gic400_distributor.c
     src/gic400_api.c
-    src/gic400_end.c
+    src/gic400_dispatch.c
 )
 
 target_include_directories(gic400_headers
@@ -114,10 +113,20 @@ target_link_libraries(gic400_library
 
 # ROM-able: no writable .data/.bss may sneak in (see driver-stack TODO.md). For the
 # serial backend this instead links debug.lib (+ __divsi3 glue) and skips the check.
-emu68_debug_backend_finalize(gic400_library ROMABLE)
+# Layout contract (entry at offset 0, RT_ENDSKIP, no writable sections) belongs to the
+# linker, not to source order -- see Emu68CommonModuleLayout.cmake.
+emu68_module_layout(gic400_library)
 
 # Exec interrupt servers answer with the Z flag, not D0 (exec.library/AddIntServer);
 # a compiler epilogue that ends in MOVE rather than MOVEM silently overwrites it.
+# emu68_isr_z_check() slices each server out of the LINKED module (by the section
+# EMU68_INTSERVER() puts it in), so a server's TU is an ordinary LTO'd TU.
+emu68_enable_lto(gic400_library)
+# The server is one file-scope asm() block, so there is no IR for LTO to carry and which
+# partition it would land in is unspecified.
+emu68_lto_keep_real_objects(gic400_library
+    src/gic400_dispatch.c
+)
 emu68_isr_z_check(gic400_library SERVERS gic400_exec_dispatcher)
 
 set_target_properties(gic400_library PROPERTIES

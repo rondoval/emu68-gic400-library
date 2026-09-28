@@ -5,8 +5,8 @@
 
 #include <gic400_private.h>
 
-LONG __attribute__((used, no_reorder)) doNotExecute(void);
-LONG __attribute__((used, no_reorder)) doNotExecute(void)
+LONG __attribute__((used, section(".text.entry"))) doNotExecute(void);
+LONG __attribute__((used, section(".text.entry"))) doNotExecute(void)
 {
     return -1;
 }
@@ -16,7 +16,7 @@ static const char libraryName[] = LIBRARY_NAME;
 static const char libraryIdString[] = LIBRARY_IDSTRING;
 static const APTR initTable[4];
 
-const struct Resident gicResident __attribute__((used)) = {
+const struct Resident gicResident __attribute__((used, section(".text.modhdr"))) = {
     RTC_MATCHWORD,
     (struct Resident *)&gicResident,
     (APTR)&endOfCode,

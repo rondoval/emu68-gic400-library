@@ -23,6 +23,12 @@ None.
 
 - Interrupt servers may use `A5` freely, as Exec allows.
 
+### Build
+
+- The assembly dispatcher moved to `src/gic400_dispatch.c` of its own. A
+  translation unit holding file-scope `asm()` cannot take part in link-time
+  optimization.
+
 ---
 
 # Release notes — gic400.library 1.8

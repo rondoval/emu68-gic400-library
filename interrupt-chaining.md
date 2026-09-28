@@ -43,30 +43,11 @@ depends on register allocation, so it changes under an innocent edit and it fail
 Nothing in the C source, the compiler flags or the type system can state this, so it is enforced
 from the build instead.
 
-#### The build check
-
-`emu68_isr_z_check(<target> SERVERS <symbol>…)` — from `Emu68CommonIsrCheck.cmake`, next to
-`emu68_rom_check()` in each driver's `CMakeLists.txt`. It runs POST_BUILD, disassembles the
-target's objects, and for every named server walks back from each `rts` to the last instruction
-that touches the CCR. That instruction must be the one that left the return value in `D0`,
-otherwise the build fails.
-
-It looks at the object files, not the linked binary, because the Amiga hunk output carries no
-symbols. Instructions that are *not* CCR writes and so get walked past: `movem`, `movea`, `lea`,
-`pea`, branches, `jsr`/`rts`, `link`/`unlk`, and `addq`/`subq` with an address-register
-destination (68000 PRM: "if the destination is an address register, the condition codes are not
-affected"). Both operand syntaxes are handled — the build container's binutils prints MIT
-(`movel sp@+,d2`), some host builds print Motorola (`move.l (sp)+,%d2`).
-
-Servers currently covered: `gic400_exec_dispatcher`, `brcm_msi_demux_isr`, `nvme_int_isr`,
-`xhci_int_isr` (both driver lines), `bcmgenet_isr0` (both driver lines). **Add the check whenever
-a driver registers a new server.**
-
 #### When the check fails
 
 Write that server in assembly — a C function with an asm wrapper around it is not the answer,
 because it leaves the same fragile epilogue in the middle. `gic400_exec_dispatcher` in
-`src/gic400_api.c` is the pattern: a file-scope `__asm__` block, struct offsets passed in as
+`src/gic400_dispatch.c` is the pattern: a file-scope `__asm__` block, struct offsets passed in as
 `offsetof()` `"i"` operands and referenced with `%c[name]`, guarded by `#ifndef
 __INTELLISENSE__`.
 
