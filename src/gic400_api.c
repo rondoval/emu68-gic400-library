@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0 OR GPL-2.0+
+#include <stddef.h>
 #include <exec/memory.h>
 #include <strutil.h>
 #include <gic400_private.h>
@@ -9,7 +10,7 @@
 static const char gic_dispatcher_name[] = "ARM GIC-400 dispatcher";
 
 /* forward declarations */
-static ULONG gic400_exec_dispatcher(register struct GIC_Base *gicBase asm("a1"));
+extern ULONG gic400_exec_dispatcher(void); /* file-scope asm, see gic400_dispatch.c */
 static void gic400_disable_irq(struct GIC_Base *gicBase, u32 irq);
 
 static s32 gic400_validate_irq(struct GIC_Base *gicBase, u32 irq)
@@ -37,6 +38,7 @@ static s32 gic400_validate_irq(struct GIC_Base *gicBase, u32 irq)
 
 static s32 gic400_parse_devicetree(struct GIC_Base *gicBase)
 {
+    struct ExecBase *SysBase = gicBase->sysBase;
     APTR DeviceTreeBase = OpenResource((CONST_STRPTR) "devicetree.resource");
     if (DeviceTreeBase == NULL)
     {
@@ -51,9 +53,9 @@ static s32 gic400_parse_devicetree(struct GIC_Base *gicBase)
         return GIC400_ERR_DEVTREE;
     }
 
-    const u32 gic_phandle = DT_GetPropertyValueULONG(root_key, "interrupt-parent", 1, FALSE);
+    const u32 gic_phandle = DT_GetPropertyValueULONG(SysBase, root_key, "interrupt-parent", 1, FALSE);
 
-    APTR gic_key = DT_FindByPHandle(root_key, gic_phandle);
+    APTR gic_key = DT_FindByPHandle(SysBase, root_key, gic_phandle);
     if (gic_key == NULL)
     {
         Kprintf("[gic] %s: Failed to find GIC key for handle %08lx\n", __func__, gic_phandle);
@@ -72,14 +74,14 @@ static s32 gic400_parse_devicetree(struct GIC_Base *gicBase)
     // TODO this is awful. rework DT_TranslateAddress
 
     const APTR parent_key = DT_GetParent(gic_key);
-    const u32 address_cells_parent = DT_GetPropertyValueULONG(parent_key, "#address-cells", 1, FALSE);
-    const u32 size_cells_parent = DT_GetPropertyValueULONG(parent_key, "#size-cells", 1, FALSE);
+    const u32 address_cells_parent = DT_GetPropertyValueULONG(SysBase, parent_key, "#address-cells", 1, FALSE);
+    const u32 size_cells_parent = DT_GetPropertyValueULONG(SysBase, parent_key, "#size-cells", 1, FALSE);
     const u32 cells_per_record = address_cells_parent + size_cells_parent;
 
     const u32 *value = DT_GetPropValue(DT_FindProperty(gic_key, (CONST_STRPTR) "reg"));
 
     gicBase->gic_base_distributor = (APTR)(ULONG)DT_GetNumber(value, address_cells_parent);
-    DT_TranslateAddress(&gicBase->gic_base_distributor, parent_key);
+    DT_TranslateAddress(SysBase, &gicBase->gic_base_distributor, parent_key);
     if (gicBase->gic_base_distributor == NULL)
     {
         Kprintf("[gic] %s: Failed to get Distributor base address for GIC\n", __func__);
@@ -89,7 +91,7 @@ static s32 gic400_parse_devicetree(struct GIC_Base *gicBase)
     }
 
     gicBase->gic_base_cpuif = (APTR)(ULONG)DT_GetNumber(value + cells_per_record, address_cells_parent);
-    DT_TranslateAddress(&gicBase->gic_base_cpuif, parent_key);
+    DT_TranslateAddress(SysBase, &gicBase->gic_base_cpuif, parent_key);
     if (gicBase->gic_base_cpuif == NULL)
     {
         Kprintf("[gic] %s: Failed to get CPU Interface base address for GIC\n", __func__);
@@ -116,6 +118,7 @@ s32 gic400_init(struct GIC_Base *gicBase)
 {
     if (!gicBase)
         return GIC400_ERR_NOT_READY;
+    struct ExecBase *SysBase = gicBase->sysBase;
 
     s32 ret = gic400_parse_devicetree(gicBase);
     if (ret < 0)
@@ -126,6 +129,11 @@ s32 gic400_init(struct GIC_Base *gicBase)
     gicBase->gicc_iidr = mmio_read32(GICC_IIDR);
 
     gicBase->max_irqs = (GICD_TYPER_IT_LINES_NUMBER(gicBase->gicd_typer) + 1) * 32;
+    /* IDs 1020-1023 are never real interrupts (GICv2: 1020/1021 reserved,
+     * 1022/1023 spurious); the dispatcher relies on max_irqs <= 1020 to
+     * reject the spurious IDs with its single range check. */
+    if (gicBase->max_irqs > 1020)
+        gicBase->max_irqs = 1020;
 
     gicBase->handler_count = 0;
     gicBase->handlers = NULL;
@@ -190,6 +198,7 @@ void gic400_shutdown(struct GIC_Base *gicBase)
 {
     if (!gicBase)
         return;
+    struct ExecBase *SysBase = gicBase->sysBase;
 
     Disable();
 
@@ -508,65 +517,6 @@ LONG GetControllerInfo(struct GICInfo *info asm("a1"), struct GIC_Base *gicBase 
     return 0;
 }
 
-/* gic400_call_interrupt: Invoke interrupt server with Exec ABI.
- * Args: interrupt - Exec interrupt entry; irq - source IRQ number.
- * Returns: void.
- */
-static inline void gic400_call_interrupt(struct Interrupt *interrupt, u32 irq)
-{
-    if (interrupt == NULL || interrupt->is_Code == NULL)
-        return;
-
-    __asm__ __volatile__(
-        "move.l %[sysbase],%%a6\n\t"
-        "move.l %[irq],%%d0\n\t"
-        "move.l %[data],%%a1\n\t"
-        "jsr (%[code])\n\t"
-        :
-        : [code] "a"(interrupt->is_Code),
-          [data] "r"(interrupt->is_Data),
-          [irq] "r"(irq),
-          [sysbase] "r"((struct ExecBase *)EXEC_BASE_NAME)
-        : "d0", "d1", "a0", "a1", "a5", "a6");
-}
-
-/* gic400_exec_dispatcher: Exec interrupt server for INTB_EXTER hook.
- * Args: none.
- * Returns: void.
- */
-static ULONG gic400_exec_dispatcher(register struct GIC_Base *gicBase asm("a1"))
-{
-    if (!gicBase)
-    {
-        KprintfT("[gic] %s: NULL GIC base\n", __func__);
-        return 0;
-    }
-
-    u32 iar = gicc_acknowledge_interrupt();
-    u32 irq = iar & 0x3FF;
-
-    if (irq == 0x3FF || irq == 0x3FE)
-    {
-        KprintfT("[gic] Spurious interrupt received (IAR=0x%08lx)\n", iar);
-        return 0; // No pending interrupts
-    }
-
-    if (irq >= gicBase->max_irqs)
-    {
-        gicc_end_interrupt(iar);
-        return 1;
-    }
-
-    struct Interrupt *interrupt = gicBase->handlers[irq];
-    if (interrupt)
-    {
-        KprintfT("[gic] Invoking handler for IRQ %ld\n", irq);
-        gic400_call_interrupt(interrupt, irq);
-    }
-
-    gicc_end_interrupt(iar);
-    return 1;
-}
 
 /* AddIntServerEx: Register interrupt server for given SPI.
  * Args:
@@ -580,6 +530,7 @@ LONG AddIntServerEx(ULONG irq asm("d0"), UBYTE priority asm("d1"), BOOL edge asm
 {
     if (!gicBase)
         return GIC400_ERR_NOT_READY;
+    struct ExecBase *SysBase = gicBase->sysBase;
     if (!interrupt || !interrupt->is_Code)
     {
         Kprintf("[gic] Invalid interrupt server for IRQ %ld\n", irq);
@@ -622,6 +573,7 @@ LONG RemIntServerEx(ULONG irq asm("d0"), struct Interrupt *interrupt asm("a1"), 
 {
     if (!gicBase)
         return GIC400_ERR_NOT_READY;
+    struct ExecBase *SysBase = gicBase->sysBase;
     if (!interrupt)
     {
         Kprintf("[gic] Invalid interrupt server for IRQ %ld\n", irq);

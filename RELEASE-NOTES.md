@@ -1,3 +1,36 @@
+# Release notes — gic400.library 1.9
+
+Changes since v1.8.
+
+---
+
+## Breaking changes
+
+None.
+
+---
+
+## Improvements / Maintenance
+
+### Faster interrupt dispatch
+
+- Every pending GIC interrupt is now handled in one pass. Before, each one
+  cost another level-6 exception, and that path includes three Amiga-bus
+  chipset accesses.
+- One memory barrier per interrupt instead of two, and a single range check.
+
+### Fixes
+
+- Interrupt servers may use `A5` freely, as Exec allows.
+
+### Build
+
+- The assembly dispatcher moved to `src/gic400_dispatch.c` of its own. A
+  translation unit holding file-scope `asm()` cannot take part in link-time
+  optimization.
+
+---
+
 # Release notes — gic400.library 1.8
 
 Changes since v1.7.

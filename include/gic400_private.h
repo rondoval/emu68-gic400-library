@@ -5,7 +5,7 @@
 #include <exec/libraries.h>
 
 #define __NOLIBBASE__
-#define EXEC_BASE_NAME (*(struct ExecBase **)4UL)
+#define EXEC_BASE_NAME SysBase /* a local in every function, from gicBase->sysBase */
 
 #ifdef __INTELLISENSE__
 #include <clib/exec_protos.h>
@@ -53,6 +53,7 @@ struct GIC_Base
 {
     struct Library libNode;
     ULONG segList;
+    struct ExecBase *sysBase;
 
     struct SignalSemaphore semaphore;
 

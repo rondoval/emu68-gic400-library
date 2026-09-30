@@ -20,11 +20,14 @@ This repository is dual-licensed under `MPL-2.0 OR GPL-2.0+`. File-level SPDX he
 - Device-tree driven discovery of distributor/CPU interface base addresses under Emu68.
 - Helper APIs for querying interrupt state, changing trigger modes, routing, and priority masks.
 - Optional debug logging to aid bring-up on new firmware or board revisions.
-- ROM-able: the linked binary contains no writable `.data`/`.bss`, with all mutable state held in the allocated library base. A build-time check (`emu68_rom_check`) enforces this.
+- ROM-able: the linked binary contains no writable `.data`/`.bss`, with all mutable state held in the allocated library base. An `ASSERT` in the shared module layout script (`emu68_module_layout`) enforces this at link time.
 
 ## Unimplemented / Planned Features
 
 - SGI related functions (currently focused on SPIs).
+- Multiple interrupt servers on one interrupt (chaining). Needed for the  PCIe INTx lines that
+  carry more than one function. [`interrupt-chaining.md`](interrupt-chaining.md) is the contract
+  an implementation has to satisfy and what it requires of an interrupt server.
 
 ## Requirements
 
