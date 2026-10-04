@@ -53,9 +53,9 @@ static s32 gic400_parse_devicetree(struct GIC_Base *gicBase)
         return GIC400_ERR_DEVTREE;
     }
 
-    const u32 gic_phandle = DT_GetPropertyValueULONG(SysBase, root_key, "interrupt-parent", 1, FALSE);
+    const u32 gic_phandle = DT_GetPropertyValueULONG(DeviceTreeBase, root_key, "interrupt-parent", 1);
 
-    APTR gic_key = DT_FindByPHandle(SysBase, root_key, gic_phandle);
+    APTR gic_key = DT_FindByPHandle(DeviceTreeBase, root_key, gic_phandle);
     if (gic_key == NULL)
     {
         Kprintf("[gic] %s: Failed to find GIC key for handle %08lx\n", __func__, gic_phandle);
@@ -67,36 +67,18 @@ static s32 gic400_parse_devicetree(struct GIC_Base *gicBase)
     if (gic_compatible == NULL || _Strnicmp((STRPTR)gic_compatible, (STRPTR) "arm,gic", 7) != 0)
     {
         Kprintf("[gic] %s: GIC compatible string is not 'arm,gic-400': %s\n", __func__, gic_compatible);
-        DT_CloseKey(gic_key);
-        DT_CloseKey(root_key);
-        return GIC400_ERR_DEVTREE;
-    }
-    // TODO this is awful. rework DT_TranslateAddress
-
-    const APTR parent_key = DT_GetParent(gic_key);
-    const u32 address_cells_parent = DT_GetPropertyValueULONG(SysBase, parent_key, "#address-cells", 1, FALSE);
-    const u32 size_cells_parent = DT_GetPropertyValueULONG(SysBase, parent_key, "#size-cells", 1, FALSE);
-    const u32 cells_per_record = address_cells_parent + size_cells_parent;
-
-    const u32 *value = DT_GetPropValue(DT_FindProperty(gic_key, (CONST_STRPTR) "reg"));
-
-    gicBase->gic_base_distributor = (APTR)(ULONG)DT_GetNumber(value, address_cells_parent);
-    DT_TranslateAddress(SysBase, &gicBase->gic_base_distributor, parent_key);
-    if (gicBase->gic_base_distributor == NULL)
-    {
-        Kprintf("[gic] %s: Failed to get Distributor base address for GIC\n", __func__);
-        DT_CloseKey(gic_key);
         DT_CloseKey(root_key);
         return GIC400_ERR_DEVTREE;
     }
 
-    gicBase->gic_base_cpuif = (APTR)(ULONG)DT_GetNumber(value + cells_per_record, address_cells_parent);
-    DT_TranslateAddress(SysBase, &gicBase->gic_base_cpuif, parent_key);
-    if (gicBase->gic_base_cpuif == NULL)
+    /* "reg" of a GIC lists the Distributor first, then the CPU Interface */
+    gicBase->gic_base_distributor = DT_GetBaseAddressVirtual(DeviceTreeBase, gic_key, 0);
+    gicBase->gic_base_cpuif = DT_GetBaseAddressVirtual(DeviceTreeBase, gic_key, 1);
+    DT_CloseKey(root_key);
+
+    if (gicBase->gic_base_distributor == NULL || gicBase->gic_base_cpuif == NULL)
     {
-        Kprintf("[gic] %s: Failed to get CPU Interface base address for GIC\n", __func__);
-        DT_CloseKey(gic_key);
-        DT_CloseKey(root_key);
+        Kprintf("[gic] %s: Failed to get the Distributor or CPU Interface base address\n", __func__);
         return GIC400_ERR_DEVTREE;
     }
 
@@ -104,9 +86,6 @@ static s32 gic400_parse_devicetree(struct GIC_Base *gicBase)
     KprintfT("[gic] %s: Distributor register base: %08lx\n", __func__, gicBase->gic_base_distributor);
     KprintfT("[gic] %s: CPU Interface register base: %08lx\n", __func__, gicBase->gic_base_cpuif);
 
-    // We're done with the device tree
-    DT_CloseKey(gic_key);
-    DT_CloseKey(root_key);
     return 0;
 }
 
