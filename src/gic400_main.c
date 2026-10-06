@@ -5,8 +5,8 @@
 
 #include <gic400_private.h>
 
-LONG __attribute__((used, no_reorder)) doNotExecute(void);
-LONG __attribute__((used, no_reorder)) doNotExecute(void)
+LONG __attribute__((used, section(".text.entry"))) doNotExecute(void);
+LONG __attribute__((used, section(".text.entry"))) doNotExecute(void)
 {
     return -1;
 }
@@ -16,7 +16,7 @@ static const char libraryName[] = LIBRARY_NAME;
 static const char libraryIdString[] = LIBRARY_IDSTRING;
 static const APTR initTable[4];
 
-const struct Resident gicResident __attribute__((used)) = {
+const struct Resident gicResident __attribute__((used, section(".text.modhdr"))) = {
     RTC_MATCHWORD,
     (struct Resident *)&gicResident,
     (APTR)&endOfCode,
@@ -31,6 +31,7 @@ const struct Resident gicResident __attribute__((used)) = {
 
 static ULONG LibExpunge(struct GIC_Base *gicBase asm("a6"))
 {
+    struct ExecBase *SysBase = gicBase->sysBase;
     ULONG segList = gicBase->segList;
 
     if (gicBase->libNode.lib_OpenCnt > 0)
@@ -52,12 +53,12 @@ static ULONG LibExpunge(struct GIC_Base *gicBase asm("a6"))
     return segList;
 }
 
-static struct Library *LibInit(struct Library *base asm("d0"), ULONG seglist asm("a0"), struct ExecBase *execBase asm("a6"))
+static struct Library *LibInit(struct Library *base asm("d0"), ULONG seglist asm("a0"), struct ExecBase *SysBase asm("a6"))
 {
     struct GIC_Base *gicBase = (struct GIC_Base *)base;
-    (void)execBase;
 
     gicBase->segList = seglist;
+    gicBase->sysBase = SysBase;
     gicBase->libNode.lib_Revision = (UWORD)LIBRARY_REVISION;
 
     s32 res = gic400_init(gicBase);
