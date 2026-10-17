@@ -1,0 +1,868 @@
+TABLE OF CONTENTS
+
+gic400.library/--background--
+gic400.library/AddIntServerEx
+gic400.library/ClearIntActive
+gic400.library/ClearIntPending
+gic400.library/DisableInt
+gic400.library/EnableInt
+gic400.library/GetControllerInfo
+gic400.library/GetHighestPending
+gic400.library/GetIntPriority
+gic400.library/GetIntStatus
+gic400.library/GetPriorityMask
+gic400.library/GetRunningPriority
+gic400.library/QueryIntRoute
+gic400.library/RemIntServerEx
+gic400.library/RouteIntToCpu
+gic400.library/SetIntActive
+gic400.library/SetIntPending
+gic400.library/SetIntPriority
+gic400.library/SetIntTriggerEdge
+gic400.library/SetIntTriggerLevel
+gic400.library/SetPriorityMask
+gic400.library/UnrouteIntFromCpu
+
+gic400.library/--background--                     gic400.library/--background--
+
+   NAME
+	--background-- -- the versions of the library, and how they are written here
+
+   FUNCTION
+	The calls of this library are described one by one below. This entry
+	says since when each exists, and how a change is told, as the autodocs
+	of the system do (see exec.library/AllocPooled or StackSwap).
+
+	A call that was added after the first version of the library has its
+	version at the end of the line of its NAME, like "(V1.10)": the number is
+	the version of the library in which it appeared. A change in what a call
+	does is written in its FUNCTION or NOTE text, "As of V1.3 ..." and "Prior
+	to V1.3 ...". A call without a version in its NAME has been there since
+	1.0.
+
+   VERSIONS
+	The history comes from the releases of the project (the tags v1.0 to
+	v1.9) and from the release notes, RELEASE-NOTES.md.
+
+	All 21 calls are in the first release, and none has been added or
+	removed since. What changed in what they do is below.
+
+	1.0   2025-10-27  First release.
+	1.1   2026-04-03  All SPIs are unrouted from CPU 0 before the controller
+	                  is enabled. The dispatcher returns another value when
+	                  an interrupt out of range is acknowledged. No call
+	                  changed.
+	1.2   2026-04-10  Not released on its own. The global variables are gone:
+	                  the state of the library is in its base.
+	1.3   2026-05-05  The calls return a LONG with distinct negative codes,
+	                  GIC400_ERR_* (see each call). Before, every failure
+	                  returned -1, as a ULONG. The library can be put in a
+	                  ROM.
+	1.4   2026-06-16  The Resident priority is 126 instead of 0: it only
+	                  changes the order in which the residents are set up.
+	                  A check at build time keeps writable data out of the
+	                  library. No call changed.
+	1.5   2026-06-23  The debug output follows the backend chosen for the
+	                  whole stack; built with -O3; the id string says
+	                  major.minor. No call changed.
+	1.6   2026-07-25  The debug output uses the TRACE tier. No call changed.
+	1.7   2026-07-28  Builds with GCC 16.1. No call changed.
+	1.8   2026-09-12  Can be built into a custom Kickstart ROM. No call
+	                  changed.
+	1.9   2026-10-06  The dispatcher handles every pending interrupt in one
+	                  pass; a server may use A5 freely (see AddIntServerEx).
+
+   NOTE
+	lib_Version and lib_Revision of the library come from the same place as
+	the id string, the version of the project: 1.9 gives lib_Version 1 and
+	lib_Revision 9. This has been so since the first release, so lib_Revision
+	tells what the library is.
+
+	The error codes (GIC400_ERR_*, V1.3) are in libraries/gic400.h.
+
+   SEE ALSO
+	exec.library/OpenLibrary()
+
+gic400.library/AddIntServerEx                     gic400.library/AddIntServerEx
+
+   NAME
+	AddIntServerEx -- register an interrupt server for a GIC-400 interrupt
+
+   SYNOPSIS
+	error = AddIntServerEx( irq, priority, edge, interrupt )
+	d0                      d0   d1        d2    a1
+
+	LONG AddIntServerEx(ULONG, UBYTE, BOOL, struct Interrupt *);
+
+   FUNCTION
+	Installs an Exec Interrupt structure as the server of one
+	GIC-400 interrupt, configures the interrupt (priority, trigger
+	mode) and enables it. The interrupt is routed to CPU 0 only.
+
+	When the interrupt fires, the library's dispatcher (itself an
+	EXTER server) acknowledges it, calls the server and signals end
+	of interrupt. The server is entered with the Exec server
+	conventions: A1 = is_Data, A5 = is_Code, A6 = SysBase, plus D0 =
+	the interrupt ID. D0/D1/A0/A1/A5/A6 are scratch. The server's
+	return value is ignored.
+
+	Only one server per interrupt is supported; there is no
+	chaining.
+
+	Registering the same Interrupt structure twice for the same
+	interrupt is not an error and does nothing.
+
+   INPUTS
+	irq             The interrupt ID. SPIs start at 32; the valid range is
+	                0 up to the number of IDs reported by
+	                GetControllerInfo() (maxIrqs, at most 1020).
+	priority        GIC priority byte, 0 is the highest. In non-secure
+	                mode the least significant bit reads as 0.
+	edge            TRUE for an edge-triggered interrupt, FALSE for level-
+	                triggered.
+	interrupt       An initialised struct Interrupt; is_Code must not be
+	                NULL. The structure must stay valid until
+	                RemIntServerEx().
+
+   RESULTS
+	error           0 on success, GIC400_ERR_INVALID_ARGUMENT if interrupt
+	                or its is_Code is NULL, GIC400_ERR_INVALID_IRQ if irq
+	                is out of range, GIC400_ERR_ALREADY_REGISTERED if
+	                another server already owns the interrupt.
+
+   EXAMPLES
+	#include <proto/exec.h>
+	#include <proto/dos.h>
+	#include <proto/gic400.h>
+
+	struct Library *GIC400_Base;
+
+	if (GIC400_Base = OpenLibrary("gic400.library", 1))
+	{
+	    struct Interrupt isr;
+	    LONG err;
+
+	    isr.is_Node.ln_Type = NT_INTERRUPT;
+	    isr.is_Node.ln_Name = "my isr";
+	    isr.is_Data = (APTR)mydata;
+	    isr.is_Code = (APTR)myserver;
+
+	    err = AddIntServerEx(irq, 0, FALSE, &isr);
+	    if (err == 0)
+	    {
+	        /* ... */
+	        RemIntServerEx(irq, &isr);
+	    }
+	    CloseLibrary(GIC400_Base);
+	}
+
+   NOTE
+	The interrupt is only signalled to the CPU if its priority is
+	numerically lower than the priority mask, which the library
+	initialises to 0x7F (see SetPriorityMask()).
+
+	As of V1.3 a failure returns one of the distinct negative GIC400_ERR_*
+	codes, as a LONG. Prior to V1.3 every failure returned -1, whatever the
+	cause, and the result was a ULONG.
+
+	As of V1.9 the dispatcher handles every pending interrupt in one pass,
+	and a server may use A5 freely, as Exec allows. Prior to V1.9 each
+	pending interrupt cost another level-6 exception, and A5 was not free
+	for a server to use (the release notes of 1.9 list this as a fix).
+
+   SEE ALSO
+	gic400.library/RemIntServerEx(),
+	gic400.library/SetPriorityMask()
+
+gic400.library/ClearIntActive                     gic400.library/ClearIntActive
+
+   NAME
+	ClearIntActive -- clear the active state of an interrupt
+
+   SYNOPSIS
+	error = ClearIntActive( irq )
+	d0                      d0
+
+	LONG ClearIntActive(ULONG);
+
+   FUNCTION
+	Removes the active state of an interrupt.
+
+   INPUTS
+	irq             The interrupt ID. SPIs start at 32; the valid range is
+	                0 up to the number of IDs reported by
+	                GetControllerInfo() (maxIrqs, at most 1020).
+
+   RESULTS
+	error           0 on success, GIC400_ERR_INVALID_IRQ if irq is out of
+	                range.
+
+   NOTE
+	As of V1.3 a failure returns one of the distinct negative GIC400_ERR_*
+	codes, as a LONG. Prior to V1.3 every failure returned -1, whatever the
+	cause, and the result was a ULONG.
+
+   SEE ALSO
+	gic400.library/SetIntActive(), gic400.library/GetIntStatus()
+
+gic400.library/ClearIntPending                   gic400.library/ClearIntPending
+
+   NAME
+	ClearIntPending -- clear the pending state of an interrupt
+
+   SYNOPSIS
+	error = ClearIntPending( irq )
+	d0                       d0
+
+	LONG ClearIntPending(ULONG);
+
+   FUNCTION
+	Removes the pending state of an interrupt.
+
+   INPUTS
+	irq             The interrupt ID. SPIs start at 32; the valid range is
+	                0 up to the number of IDs reported by
+	                GetControllerInfo() (maxIrqs, at most 1020).
+
+   RESULTS
+	error           0 on success, GIC400_ERR_INVALID_IRQ if irq is out of
+	                range.
+
+   NOTE
+	As of V1.3 a failure returns one of the distinct negative GIC400_ERR_*
+	codes, as a LONG. Prior to V1.3 every failure returned -1, whatever the
+	cause, and the result was a ULONG.
+
+   SEE ALSO
+	gic400.library/SetIntPending(), gic400.library/GetIntStatus()
+
+gic400.library/DisableInt                             gic400.library/DisableInt
+
+   NAME
+	DisableInt -- disable forwarding of an interrupt
+
+   SYNOPSIS
+	error = DisableInt( irq )
+	d0                  d0
+
+	LONG DisableInt(ULONG);
+
+   FUNCTION
+	Clears the enable bit of an interrupt in the Distributor.
+	Priority, trigger mode and routing are left untouched, and a
+	registered server stays registered.
+
+   INPUTS
+	irq             The interrupt ID. SPIs start at 32; the valid range is
+	                0 up to the number of IDs reported by
+	                GetControllerInfo() (maxIrqs, at most 1020).
+
+   RESULTS
+	error           0 on success, GIC400_ERR_INVALID_IRQ if irq is out of
+	                range.
+
+   NOTE
+	As of V1.3 a failure returns one of the distinct negative GIC400_ERR_*
+	codes, as a LONG. Prior to V1.3 every failure returned -1, whatever the
+	cause, and the result was a ULONG.
+
+   SEE ALSO
+	gic400.library/EnableInt()
+
+gic400.library/EnableInt                               gic400.library/EnableInt
+
+   NAME
+	EnableInt -- enable forwarding of an interrupt
+
+   SYNOPSIS
+	error = EnableInt( irq )
+	d0                 d0
+
+	LONG EnableInt(ULONG);
+
+   FUNCTION
+	Sets the enable bit of an interrupt in the Distributor.
+	Priority, trigger mode and routing are left untouched.
+
+   INPUTS
+	irq             The interrupt ID. SPIs start at 32; the valid range is
+	                0 up to the number of IDs reported by
+	                GetControllerInfo() (maxIrqs, at most 1020).
+
+   RESULTS
+	error           0 on success, GIC400_ERR_INVALID_IRQ if irq is out of
+	                range.
+
+   NOTE
+	An interrupt with a server installed by AddIntServerEx() is
+	already enabled.
+
+	As of V1.3 a failure returns one of the distinct negative GIC400_ERR_*
+	codes, as a LONG. Prior to V1.3 every failure returned -1, whatever the
+	cause, and the result was a ULONG.
+
+   SEE ALSO
+	gic400.library/DisableInt()
+
+gic400.library/GetControllerInfo               gic400.library/GetControllerInfo
+
+   NAME
+	GetControllerInfo -- get identification and capabilities of the controller
+
+   SYNOPSIS
+	error = GetControllerInfo( info )
+	d0                         a1
+
+	LONG GetControllerInfo(struct GICInfo *);
+
+   FUNCTION
+	Fills a GICInfo structure (libraries/gic400.h) from the
+	Distributor and CPU interface identification registers:
+
+	distributorIIDR: GICD_IIDR.
+
+	distributorTyper: GICD_TYPER.
+
+	cpuInterfaceIIDR: GICC_IIDR.
+
+	maxIrqs: number of interrupt IDs, capped at 1020.
+
+	cpuCount: number of CPU interfaces.
+
+	securityExtensions: 1 if the security extensions are
+	implemented.
+
+	lspiCount: number of lockable SPIs.
+
+   INPUTS
+	info            The structure to fill.
+
+   RESULTS
+	error           0 on success, GIC400_ERR_INVALID_ARGUMENT if info is
+	                NULL.
+
+   EXAMPLES
+	#include <proto/exec.h>
+	#include <proto/dos.h>
+	#include <proto/gic400.h>
+
+	struct Library *GIC400_Base;
+
+	if (GIC400_Base = OpenLibrary("gic400.library", 1))
+	{
+	    struct GICInfo info;
+
+	    if (GetControllerInfo(&info) == 0)
+	        Printf("%ld interrupts, %ld CPU(s)\n", info.maxIrqs, (ULONG)info.cpuCount);
+	    CloseLibrary(GIC400_Base);
+	}
+
+   NOTE
+	As of V1.3 a failure returns one of the distinct negative GIC400_ERR_*
+	codes, as a LONG. Prior to V1.3 every failure returned -1, whatever the
+	cause, and the result was a ULONG.
+
+   SEE ALSO
+	gic400.library/GetIntStatus()
+
+gic400.library/GetHighestPending               gic400.library/GetHighestPending
+
+   NAME
+	GetHighestPending -- get the highest priority pending interrupt
+
+   SYNOPSIS
+	irq = GetHighestPending()
+	d0
+
+	LONG GetHighestPending(VOID);
+
+   FUNCTION
+	Reads the highest priority pending interrupt register of the CPU
+	interface, without acknowledging the interrupt.
+
+   RESULTS
+	irq             The interrupt ID (low 10 bits of the register; 1023
+	                when nothing is pending, per the GICv2 specification),
+	                or a negative GIC400_ERR_* code.
+
+   NOTE
+	As of V1.3 a failure returns one of the distinct negative GIC400_ERR_*
+	codes, as a LONG. Prior to V1.3 every failure returned -1, whatever the
+	cause, and the result was a ULONG.
+
+   SEE ALSO
+	gic400.library/GetRunningPriority()
+
+gic400.library/GetIntPriority                     gic400.library/GetIntPriority
+
+   NAME
+	GetIntPriority -- get the priority of an interrupt
+
+   SYNOPSIS
+	priority = GetIntPriority( irq )
+	d0                         d0
+
+	LONG GetIntPriority(ULONG);
+
+   FUNCTION
+	Reads the priority byte of an interrupt.
+
+   INPUTS
+	irq             The interrupt ID. SPIs start at 32; the valid range is
+	                0 up to the number of IDs reported by
+	                GetControllerInfo() (maxIrqs, at most 1020).
+
+   RESULTS
+	priority        The priority byte (0 to 255), or a negative
+	                GIC400_ERR_* code if irq is out of range.
+
+   NOTE
+	As of V1.3 a failure returns one of the distinct negative GIC400_ERR_*
+	codes, as a LONG. Prior to V1.3 every failure returned -1, whatever the
+	cause, and the result was a ULONG.
+
+   SEE ALSO
+	gic400.library/SetIntPriority()
+
+gic400.library/GetIntStatus                         gic400.library/GetIntStatus
+
+   NAME
+	GetIntStatus -- read the pending, active and enabled state of an interrupt
+
+   SYNOPSIS
+	error = GetIntStatus( irq, pending, active, enabled )
+	d0                    d0   a1       a2      a3
+
+	LONG GetIntStatus(ULONG, BOOL *, BOOL *, BOOL *);
+
+   FUNCTION
+	Reads the state of an interrupt from the Distributor. Each
+	output pointer is optional and may be NULL.
+
+   INPUTS
+	irq             The interrupt ID. SPIs start at 32; the valid range is
+	                0 up to the number of IDs reported by
+	                GetControllerInfo() (maxIrqs, at most 1020).
+	pending         Receives TRUE if the interrupt is pending.
+	active          Receives TRUE if the interrupt is active.
+	enabled         Receives TRUE if the interrupt is enabled.
+
+   RESULTS
+	error           0 on success, GIC400_ERR_INVALID_IRQ if irq is out of
+	                range.
+
+   EXAMPLES
+	#include <proto/exec.h>
+	#include <proto/dos.h>
+	#include <proto/gic400.h>
+
+	struct Library *GIC400_Base;
+
+	if (GIC400_Base = OpenLibrary("gic400.library", 1))
+	{
+	    BOOL pending, active, enabled;
+
+	    if (GetIntStatus(irq, &pending, &active, &enabled) == 0)
+	        Printf("pending %ld active %ld enabled %ld\n", pending, active, enabled);
+	    CloseLibrary(GIC400_Base);
+	}
+
+   NOTE
+	As of V1.3 a failure returns one of the distinct negative GIC400_ERR_*
+	codes, as a LONG. Prior to V1.3 every failure returned -1, whatever the
+	cause, and the result was a ULONG.
+
+   SEE ALSO
+	gic400.library/EnableInt(), gic400.library/SetIntPending()
+
+gic400.library/GetPriorityMask                   gic400.library/GetPriorityMask
+
+   NAME
+	GetPriorityMask -- get the priority mask of the CPU interface
+
+   SYNOPSIS
+	mask = GetPriorityMask()
+	d0
+
+	LONG GetPriorityMask(VOID);
+
+   FUNCTION
+	Reads the priority mask register of the CPU interface.
+
+   RESULTS
+	mask            The priority mask (0 to 255), or a negative
+	                GIC400_ERR_* code.
+
+   NOTE
+	As of V1.3 a failure returns one of the distinct negative GIC400_ERR_*
+	codes, as a LONG. Prior to V1.3 every failure returned -1, whatever the
+	cause, and the result was a ULONG.
+
+   SEE ALSO
+	gic400.library/SetPriorityMask()
+
+gic400.library/GetRunningPriority             gic400.library/GetRunningPriority
+
+   NAME
+	GetRunningPriority -- get the running priority of the CPU interface
+
+   SYNOPSIS
+	priority = GetRunningPriority()
+	d0
+
+	LONG GetRunningPriority(VOID);
+
+   FUNCTION
+	Reads the running priority register of the CPU interface: the
+	priority of the interrupt being serviced.
+
+   RESULTS
+	priority        The running priority (0 to 255), or a negative
+	                GIC400_ERR_* code.
+
+   NOTE
+	As of V1.3 a failure returns one of the distinct negative GIC400_ERR_*
+	codes, as a LONG. Prior to V1.3 every failure returned -1, whatever the
+	cause, and the result was a ULONG.
+
+   SEE ALSO
+	gic400.library/GetHighestPending()
+
+gic400.library/QueryIntRoute                       gic400.library/QueryIntRoute
+
+   NAME
+	QueryIntRoute -- get the CPU targets of an interrupt
+
+   SYNOPSIS
+	mask = QueryIntRoute( irq )
+	d0                    d0
+
+	LONG QueryIntRoute(ULONG);
+
+   FUNCTION
+	Reads the target list of a shared peripheral interrupt.
+
+   INPUTS
+	irq             The SPI ID (32 or above).
+
+   RESULTS
+	mask            A bit mask, bit n set when CPU n is a target; or a
+	                negative GIC400_ERR_* code (GIC400_ERR_NOT_ROUTABLE
+	                for IDs below 32, GIC400_ERR_INVALID_IRQ if out of
+	                range).
+
+   NOTE
+	As of V1.3 a failure returns one of the distinct negative GIC400_ERR_*
+	codes, as a LONG. Prior to V1.3 every failure returned -1, whatever the
+	cause, and the result was a ULONG.
+
+   SEE ALSO
+	gic400.library/RouteIntToCpu(),
+	gic400.library/UnrouteIntFromCpu()
+
+gic400.library/RemIntServerEx                     gic400.library/RemIntServerEx
+
+   NAME
+	RemIntServerEx -- remove the interrupt server of a GIC-400 interrupt
+
+   SYNOPSIS
+	error = RemIntServerEx( irq, interrupt )
+	d0                      d0   a1
+
+	LONG RemIntServerEx(ULONG, struct Interrupt *);
+
+   FUNCTION
+	Disables the interrupt, unroutes it from CPU 0 and removes the
+	server installed by AddIntServerEx().
+
+   INPUTS
+	irq             The interrupt ID. SPIs start at 32; the valid range is
+	                0 up to the number of IDs reported by
+	                GetControllerInfo() (maxIrqs, at most 1020).
+	interrupt       The structure given to AddIntServerEx() for this
+	                interrupt.
+
+   RESULTS
+	error           0 on success, GIC400_ERR_INVALID_ARGUMENT if interrupt
+	                is NULL or is not the registered server,
+	                GIC400_ERR_NOT_FOUND if no server is registered,
+	                GIC400_ERR_INVALID_IRQ if irq is out of range.
+
+   NOTE
+	As of V1.3 a failure returns one of the distinct negative GIC400_ERR_*
+	codes, as a LONG. Prior to V1.3 every failure returned -1, whatever the
+	cause, and the result was a ULONG.
+
+   SEE ALSO
+	gic400.library/AddIntServerEx()
+
+gic400.library/RouteIntToCpu                       gic400.library/RouteIntToCpu
+
+   NAME
+	RouteIntToCpu -- add a CPU to the targets of an interrupt
+
+   SYNOPSIS
+	error = RouteIntToCpu( irq, cpu )
+	d0                     d0   d1
+
+	LONG RouteIntToCpu(ULONG, UBYTE);
+
+   FUNCTION
+	Sets the bit of a CPU in the target list of a shared peripheral
+	interrupt. Other targets are kept.
+
+   INPUTS
+	irq             The SPI ID (32 or above).
+	cpu             CPU index, 0 to 7.
+
+   RESULTS
+	error           0 on success, GIC400_ERR_INVALID_ARGUMENT if cpu is 8
+	                or more, GIC400_ERR_NOT_ROUTABLE if irq is an SGI or
+	                PPI (below 32), GIC400_ERR_INVALID_IRQ if irq is out
+	                of range.
+
+   NOTE
+	As of V1.3 a failure returns one of the distinct negative GIC400_ERR_*
+	codes, as a LONG. Prior to V1.3 every failure returned -1, whatever the
+	cause, and the result was a ULONG.
+
+   SEE ALSO
+	gic400.library/UnrouteIntFromCpu(),
+	gic400.library/QueryIntRoute()
+
+gic400.library/SetIntActive                         gic400.library/SetIntActive
+
+   NAME
+	SetIntActive -- set the active state of an interrupt
+
+   SYNOPSIS
+	error = SetIntActive( irq )
+	d0                    d0
+
+	LONG SetIntActive(ULONG);
+
+   FUNCTION
+	Marks an interrupt as active by software.
+
+   INPUTS
+	irq             The interrupt ID. SPIs start at 32; the valid range is
+	                0 up to the number of IDs reported by
+	                GetControllerInfo() (maxIrqs, at most 1020).
+
+   RESULTS
+	error           0 on success, GIC400_ERR_INVALID_IRQ if irq is out of
+	                range.
+
+   NOTE
+	As of V1.3 a failure returns one of the distinct negative GIC400_ERR_*
+	codes, as a LONG. Prior to V1.3 every failure returned -1, whatever the
+	cause, and the result was a ULONG.
+
+   SEE ALSO
+	gic400.library/ClearIntActive(), gic400.library/GetIntStatus()
+
+gic400.library/SetIntPending                       gic400.library/SetIntPending
+
+   NAME
+	SetIntPending -- set the pending state of an interrupt
+
+   SYNOPSIS
+	error = SetIntPending( irq )
+	d0                     d0
+
+	LONG SetIntPending(ULONG);
+
+   FUNCTION
+	Makes an interrupt pending by software, as if its source had
+	raised it.
+
+   INPUTS
+	irq             The interrupt ID. SPIs start at 32; the valid range is
+	                0 up to the number of IDs reported by
+	                GetControllerInfo() (maxIrqs, at most 1020).
+
+   RESULTS
+	error           0 on success, GIC400_ERR_INVALID_IRQ if irq is out of
+	                range.
+
+   NOTE
+	As of V1.3 a failure returns one of the distinct negative GIC400_ERR_*
+	codes, as a LONG. Prior to V1.3 every failure returned -1, whatever the
+	cause, and the result was a ULONG.
+
+   SEE ALSO
+	gic400.library/ClearIntPending(), gic400.library/GetIntStatus()
+
+gic400.library/SetIntPriority                     gic400.library/SetIntPriority
+
+   NAME
+	SetIntPriority -- set the priority of an interrupt
+
+   SYNOPSIS
+	error = SetIntPriority( irq, priority )
+	d0                      d0   d1
+
+	LONG SetIntPriority(ULONG, UBYTE);
+
+   FUNCTION
+	Writes the priority byte of an interrupt. A lower value is a
+	higher priority.
+
+   INPUTS
+	irq             The interrupt ID. SPIs start at 32; the valid range is
+	                0 up to the number of IDs reported by
+	                GetControllerInfo() (maxIrqs, at most 1020).
+	priority        GIC priority byte. In non-secure mode the least
+	                significant bit reads as 0.
+
+   RESULTS
+	error           0 on success, GIC400_ERR_INVALID_IRQ if irq is out of
+	                range.
+
+   NOTE
+	As of V1.3 a failure returns one of the distinct negative GIC400_ERR_*
+	codes, as a LONG. Prior to V1.3 every failure returned -1, whatever the
+	cause, and the result was a ULONG.
+
+   SEE ALSO
+	gic400.library/GetIntPriority(),
+	gic400.library/SetPriorityMask()
+
+gic400.library/SetIntTriggerEdge               gic400.library/SetIntTriggerEdge
+
+   NAME
+	SetIntTriggerEdge -- configure an interrupt as edge-triggered
+
+   SYNOPSIS
+	error = SetIntTriggerEdge( irq )
+	d0                         d0
+
+	LONG SetIntTriggerEdge(ULONG);
+
+   FUNCTION
+	Programs the interrupt for edge-triggered operation.
+
+   INPUTS
+	irq             The interrupt ID. SPIs start at 32; the valid range is
+	                0 up to the number of IDs reported by
+	                GetControllerInfo() (maxIrqs, at most 1020).
+
+   RESULTS
+	error           0 on success, GIC400_ERR_INVALID_IRQ if irq is out of
+	                range.
+
+   NOTE
+	The configuration of SGIs (IDs 0 to 15) is fixed: for those the
+	call does nothing and still returns 0.
+
+	As of V1.3 a failure returns one of the distinct negative GIC400_ERR_*
+	codes, as a LONG. Prior to V1.3 every failure returned -1, whatever the
+	cause, and the result was a ULONG.
+
+   SEE ALSO
+	gic400.library/SetIntTriggerLevel()
+
+gic400.library/SetIntTriggerLevel             gic400.library/SetIntTriggerLevel
+
+   NAME
+	SetIntTriggerLevel -- configure an interrupt as level-triggered
+
+   SYNOPSIS
+	error = SetIntTriggerLevel( irq )
+	d0                          d0
+
+	LONG SetIntTriggerLevel(ULONG);
+
+   FUNCTION
+	Programs the interrupt for level-triggered operation.
+
+   INPUTS
+	irq             The interrupt ID. SPIs start at 32; the valid range is
+	                0 up to the number of IDs reported by
+	                GetControllerInfo() (maxIrqs, at most 1020).
+
+   RESULTS
+	error           0 on success, GIC400_ERR_INVALID_IRQ if irq is out of
+	                range.
+
+   NOTE
+	The configuration of SGIs (IDs 0 to 15) is fixed: for those the
+	call does nothing and still returns 0.
+
+	As of V1.3 a failure returns one of the distinct negative GIC400_ERR_*
+	codes, as a LONG. Prior to V1.3 every failure returned -1, whatever the
+	cause, and the result was a ULONG.
+
+   SEE ALSO
+	gic400.library/SetIntTriggerEdge()
+
+gic400.library/SetPriorityMask                   gic400.library/SetPriorityMask
+
+   NAME
+	SetPriorityMask -- set the priority mask of the CPU interface
+
+   SYNOPSIS
+	error = SetPriorityMask( mask )
+	d0                       d0
+
+	LONG SetPriorityMask(UBYTE);
+
+   FUNCTION
+	Writes the priority mask register of the CPU interface. Only
+	interrupts whose priority value is numerically lower than the
+	mask are signalled to the CPU.
+
+	The library sets the mask to 0x7F at startup.
+
+   INPUTS
+	mask            The priority mask.
+
+   RESULTS
+	error           0 on success, GIC400_ERR_NOT_READY if the library is
+	                not initialised.
+
+   NOTE
+	The mask is global: it affects every interrupt of every user of
+	the library.
+
+	As of V1.3 a failure returns one of the distinct negative GIC400_ERR_*
+	codes, as a LONG. Prior to V1.3 every failure returned -1, whatever the
+	cause, and the result was a ULONG.
+
+   SEE ALSO
+	gic400.library/GetPriorityMask(),
+	gic400.library/SetIntPriority()
+
+gic400.library/UnrouteIntFromCpu               gic400.library/UnrouteIntFromCpu
+
+   NAME
+	UnrouteIntFromCpu -- remove a CPU from the targets of an interrupt
+
+   SYNOPSIS
+	error = UnrouteIntFromCpu( irq, cpu )
+	d0                         d0   d1
+
+	LONG UnrouteIntFromCpu(ULONG, UBYTE);
+
+   FUNCTION
+	Clears the bit of a CPU in the target list of a shared
+	peripheral interrupt. Other targets are kept.
+
+   INPUTS
+	irq             The SPI ID (32 or above).
+	cpu             CPU index, 0 to 7.
+
+   RESULTS
+	error           0 on success, GIC400_ERR_INVALID_ARGUMENT if cpu is 8
+	                or more, GIC400_ERR_NOT_ROUTABLE if irq is an SGI or
+	                PPI (below 32), GIC400_ERR_INVALID_IRQ if irq is out
+	                of range.
+
+   NOTE
+	As of V1.3 a failure returns one of the distinct negative GIC400_ERR_*
+	codes, as a LONG. Prior to V1.3 every failure returned -1, whatever the
+	cause, and the result was a ULONG.
+
+   SEE ALSO
+	gic400.library/RouteIntToCpu(), gic400.library/QueryIntRoute()
+

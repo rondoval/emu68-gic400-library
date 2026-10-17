@@ -14,6 +14,10 @@ if(NOT DEFINED OUTPUT_BASENAME)
     message(FATAL_ERROR "OUTPUT_BASENAME is required")
 endif()
 
+if(NOT DEFINED OUTPUT_FD_FILE)
+    message(FATAL_ERROR "OUTPUT_FD_FILE is required")
+endif()
+
 file(MAKE_DIRECTORY ${OUTPUT_DIR}/clib)
 file(MAKE_DIRECTORY ${OUTPUT_DIR}/inline)
 file(MAKE_DIRECTORY ${OUTPUT_DIR}/pragmas)
@@ -35,3 +39,7 @@ generate_sfd_header(clib ${OUTPUT_DIR}/clib/${OUTPUT_BASENAME}_protos.h)
 generate_sfd_header(macros ${OUTPUT_DIR}/inline/${OUTPUT_BASENAME}.h)
 generate_sfd_header(pragmas ${OUTPUT_DIR}/pragmas/${OUTPUT_BASENAME}_pragmas.h)
 generate_sfd_header(proto ${OUTPUT_DIR}/proto/${OUTPUT_BASENAME}.h)
+
+get_filename_component(OUTPUT_FD_DIR ${OUTPUT_FD_FILE} DIRECTORY)
+file(MAKE_DIRECTORY ${OUTPUT_FD_DIR})
+generate_sfd_header(fd ${OUTPUT_FD_FILE})
