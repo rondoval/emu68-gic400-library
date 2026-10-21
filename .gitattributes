@@ -1,0 +1,2 @@
+# Autodocs are read on the Amiga: LF, whatever core.autocrlf says
+*.doc text eol=lf
