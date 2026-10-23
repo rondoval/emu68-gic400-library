@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14.0)
-project(gic400.library VERSION 1.9)
+project(gic400.library VERSION 1.10)
 
 # Version string
 string(TIMESTAMP CURRENT_DATE "(%d.%m.%Y)")
@@ -10,7 +10,7 @@ set(VERSTRING "$VER: ${PROJECT_NAME} ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_
 string(REGEX REPLACE "\\.library$" "" LIBRARY_BASENAME "${PROJECT_NAME}")
 
 # Dependencies
-find_package(Emu68Common CONFIG REQUIRED)
+find_package(Emu68Common 2.1 CONFIG REQUIRED) # 2.1: emu68_sfd_headers()
 
 # SFD -> clib/inline/pragmas/proto headers (emu68-common's emu68_sfd_headers)
 set(GIC400_GENERATED_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated/include)

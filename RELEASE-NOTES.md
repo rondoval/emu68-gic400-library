@@ -1,3 +1,24 @@
+# Release notes - gic400.library 1.10
+
+Changes since v1.9.
+
+---
+
+## Breaking changes
+
+None.
+
+---
+
+## Build & tooling
+
+- The SFD headers come from emu68-common's `emu68_sfd_headers()`; the
+  library's own copy of the generator script is gone.
+- Needs emu68-common 2.1 or newer, and `find_package()` says so: an older one
+  fails at configure instead of mid-build.
+
+---
+
 # Release notes — gic400.library 1.9
 
 Changes since v1.8.
