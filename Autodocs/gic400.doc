@@ -24,22 +24,24 @@ gic400.library/SetPriorityMask
 gic400.library/UnrouteIntFromCpu
 gic400.library/--background--                   gic400.library/--background--
 
+   AVAILABILITY
+	The library drives the ARM GIC-400 interrupt controller of the Pi 4
+	and the CM4 under Emu68, and finds it through the device tree. On a
+	machine without one, such as a Pi 3, OpenLibrary() returns NULL.
+
    VERSION MARKS
 	The calls of this library are described one by one below. This entry
 	says since when each exists, and how a change is told, as the autodocs
 	of the system do (see exec.library/AllocPooled or StackSwap).
 
 	A call that was added after the first version of the library has its
-	version at the end of the line of its NAME, like "(V1.10)": the number is
-	the version of the library in which it appeared. A change in what a call
-	does is written in its FUNCTION or NOTE text, "As of V1.3 ..." and "Prior
-	to V1.3 ...". A call without a version in its NAME has been there since
-	1.0.
+	version at the end of the line of its NAME, like "(V1.10)": the number
+	is the version of the library in which it appeared. A change in what a
+	call does is written in its FUNCTION or NOTE text, "As of V1.9 ..." and
+	"Prior to V1.9 ...". A call without a version in its NAME has been there
+	since 1.0.
 
    VERSIONS
-	The history comes from the releases of the project (the tags v1.0 to
-	v1.9) and from the release notes, RELEASE-NOTES.md.
-
 	All 21 calls are in the first release, and none has been added or
 	removed since. What changed in what they do is below.
 
@@ -48,12 +50,13 @@ gic400.library/UnrouteIntFromCpu
 	                  is enabled. The dispatcher returns another value when
 	                  an interrupt out of range is acknowledged. No call
 	                  changed.
-	1.2   2026-04-10  Not released on its own. The global variables are gone:
-	                  the state of the library is in its base.
-	1.3   2026-05-05  The calls return a LONG with distinct negative codes,
-	                  GIC400_ERR_* (see each call). Before, every failure
-	                  returned -1, as a ULONG. The library can be put in a
-	                  ROM.
+	1.2   2026-04-10  Not released on its own. The global variables are
+	                  gone: the state of the library is in its base.
+	1.3   2026-05-05  Every call returns a LONG, and a failure is one of the
+	                  negative GIC400_ERR_* codes (see ERROR CODES below).
+	                  The GIC is found through the interrupt-parent property
+	                  of the device tree, and the library fails to open on a
+	                  machine without one. The library can be put in a ROM.
 	1.4   2026-06-16  The Resident priority is 126 instead of 0: it only
 	                  changes the order in which the residents are set up.
 	                  A check at build time keeps writable data out of the
@@ -67,14 +70,22 @@ gic400.library/UnrouteIntFromCpu
 	                  changed.
 	1.9   2026-10-06  The dispatcher handles every pending interrupt in one
 	                  pass; a server may use A5 freely (see AddIntServerEx).
+	1.10  2026-10-31  This document and an FD file come with the library.
+	                  No call changed.
 
    VERSION AND REVISION
 	lib_Version and lib_Revision of the library come from the same place as
-	the id string, the version of the project: 1.9 gives lib_Version 1 and
-	lib_Revision 9. This has been so since the first release, so lib_Revision
-	tells what the library is.
+	the id string, the version of the project: 1.10 gives lib_Version 1 and
+	lib_Revision 10. This has been so since the first release, so
+	lib_Revision tells what the library is.
 
-	The error codes (GIC400_ERR_*, V1.3) are in libraries/gic400.h.
+   ERROR CODES
+	As of V1.3 every call returns a LONG, and a failure is one of the
+	distinct negative GIC400_ERR_* codes of libraries/gic400.h. Prior to
+	V1.3 every failure returned -1, whatever the cause, and all calls but
+	six returned a ULONG: GetControllerInfo(), GetHighestPending(),
+	GetIntPriority(), GetPriorityMask(), GetRunningPriority() and
+	QueryIntRoute() have returned a LONG from the start.
 
    SEE ALSO
 	exec.library/OpenLibrary()
@@ -99,11 +110,22 @@ gic400.library/UnrouteIntFromCpu
 	EXTER server) acknowledges it, calls the server and signals end
 	of interrupt. The server is entered with the Exec server
 	conventions: A1 = is_Data, A5 = is_Code, A6 = SysBase, plus D0 =
-	the interrupt ID. D0/D1/A0/A1/A5/A6 are scratch. The server's
-	return value is ignored.
+	the interrupt ID. D0/D1/A0/A1/A5/A6 are scratch.
+
+	The server runs in interrupt context. For a level-triggered
+	interrupt it must clear the source at its device before it
+	returns: the end of interrupt follows at once, and a source
+	that is still asserted fires again.
+
+	The server returns as exec.library/AddIntServer() asks, with
+	the Z flag clear if the interrupt was its own and set if it
+	was not.
 
 	Only one server per interrupt is supported; there is no
-	chaining.
+	chaining, so the dispatcher does not act on the flag today. A
+	later version with several servers on one interrupt will, and
+	a server that always claims the interrupt would then starve
+	the ones after it.
 
 	Registering the same Interrupt structure twice for the same
 	interrupt is not an error and does nothing.
@@ -139,6 +161,7 @@ gic400.library/UnrouteIntFromCpu
 	    LONG err;
 
 	    isr.is_Node.ln_Type = NT_INTERRUPT;
+	    isr.is_Node.ln_Pri = 0;
 	    isr.is_Node.ln_Name = "my isr";
 	    isr.is_Data = (APTR)mydata;
 	    isr.is_Code = (APTR)myserver;
@@ -157,18 +180,15 @@ gic400.library/UnrouteIntFromCpu
 	numerically lower than the priority mask, which the library
 	initialises to 0x7F (see SetPriorityMask()).
 
-	As of V1.3 a failure returns one of the distinct negative GIC400_ERR_*
-	codes, as a LONG. Prior to V1.3 every failure returned -1, whatever the
-	cause, and the result was a ULONG.
-
 	As of V1.9 the dispatcher handles every pending interrupt in one pass,
 	and a server may use A5 freely, as Exec allows. Prior to V1.9 each
 	pending interrupt cost another level-6 exception, and A5 was not free
-	for a server to use (the release notes of 1.9 list this as a fix).
+	for a server to use.
 
    SEE ALSO
 	gic400.library/RemIntServerEx(),
-	gic400.library/SetPriorityMask()
+	gic400.library/SetPriorityMask(),
+	exec.library/AddIntServer()
 
 gic400.library/ClearIntActive                   gic400.library/ClearIntActive
 
@@ -192,11 +212,6 @@ gic400.library/UnrouteIntFromCpu
    RESULTS
 	error           0 on success, GIC400_ERR_INVALID_IRQ if irq is out of
 	                range.
-
-   NOTE
-	As of V1.3 a failure returns one of the distinct negative GIC400_ERR_*
-	codes, as a LONG. Prior to V1.3 every failure returned -1, whatever the
-	cause, and the result was a ULONG.
 
    SEE ALSO
 	gic400.library/SetIntActive(), gic400.library/GetIntStatus()
@@ -223,11 +238,6 @@ gic400.library/UnrouteIntFromCpu
    RESULTS
 	error           0 on success, GIC400_ERR_INVALID_IRQ if irq is out of
 	                range.
-
-   NOTE
-	As of V1.3 a failure returns one of the distinct negative GIC400_ERR_*
-	codes, as a LONG. Prior to V1.3 every failure returned -1, whatever the
-	cause, and the result was a ULONG.
 
    SEE ALSO
 	gic400.library/SetIntPending(), gic400.library/GetIntStatus()
@@ -256,11 +266,6 @@ gic400.library/UnrouteIntFromCpu
    RESULTS
 	error           0 on success, GIC400_ERR_INVALID_IRQ if irq is out of
 	                range.
-
-   NOTE
-	As of V1.3 a failure returns one of the distinct negative GIC400_ERR_*
-	codes, as a LONG. Prior to V1.3 every failure returned -1, whatever the
-	cause, and the result was a ULONG.
 
    SEE ALSO
 	gic400.library/EnableInt()
@@ -293,17 +298,13 @@ gic400.library/UnrouteIntFromCpu
 	An interrupt with a server installed by AddIntServerEx() is
 	already enabled.
 
-	As of V1.3 a failure returns one of the distinct negative GIC400_ERR_*
-	codes, as a LONG. Prior to V1.3 every failure returned -1, whatever the
-	cause, and the result was a ULONG.
-
    SEE ALSO
 	gic400.library/DisableInt()
 
 gic400.library/GetControllerInfo             gic400.library/GetControllerInfo
 
    NAME
-	GetControllerInfo -- get identification and capabilities of the controller
+	GetControllerInfo -- get identification and capabilities of the GIC
 
    SYNOPSIS
 	error = GetControllerInfo( info )
@@ -349,14 +350,10 @@ gic400.library/UnrouteIntFromCpu
 	    struct GICInfo info;
 
 	    if (GetControllerInfo(&info) == 0)
-	        Printf("%ld interrupts, %ld CPU(s)\n", info.maxIrqs, (ULONG)info.cpuCount);
+	        Printf("%ld interrupts, %ld CPU(s)\n",
+	               info.maxIrqs, (ULONG)info.cpuCount);
 	    CloseLibrary(GIC400_Base);
 	}
-
-   NOTE
-	As of V1.3 a failure returns one of the distinct negative GIC400_ERR_*
-	codes, as a LONG. Prior to V1.3 every failure returned -1, whatever the
-	cause, and the result was a ULONG.
 
    SEE ALSO
 	gic400.library/GetIntStatus()
@@ -380,11 +377,6 @@ gic400.library/UnrouteIntFromCpu
 	irq             The interrupt ID (low 10 bits of the register; 1023
 	                when nothing is pending, per the GICv2 specification),
 	                or a negative GIC400_ERR_* code.
-
-   NOTE
-	As of V1.3 a failure returns one of the distinct negative GIC400_ERR_*
-	codes, as a LONG. Prior to V1.3 every failure returned -1, whatever the
-	cause, and the result was a ULONG.
 
    SEE ALSO
 	gic400.library/GetRunningPriority()
@@ -412,18 +404,13 @@ gic400.library/UnrouteIntFromCpu
 	priority        The priority byte (0 to 255), or a negative
 	                GIC400_ERR_* code if irq is out of range.
 
-   NOTE
-	As of V1.3 a failure returns one of the distinct negative GIC400_ERR_*
-	codes, as a LONG. Prior to V1.3 every failure returned -1, whatever the
-	cause, and the result was a ULONG.
-
    SEE ALSO
 	gic400.library/SetIntPriority()
 
 gic400.library/GetIntStatus                       gic400.library/GetIntStatus
 
    NAME
-	GetIntStatus -- read the pending, active and enabled state of an interrupt
+	GetIntStatus -- get pending, active and enabled state of an interrupt
 
    SYNOPSIS
 	error = GetIntStatus( irq, pending, active, enabled )
@@ -459,14 +446,10 @@ gic400.library/UnrouteIntFromCpu
 	    BOOL pending, active, enabled;
 
 	    if (GetIntStatus(irq, &pending, &active, &enabled) == 0)
-	        Printf("pending %ld active %ld enabled %ld\n", pending, active, enabled);
+	        Printf("pending %ld active %ld enabled %ld\n",
+	               pending, active, enabled);
 	    CloseLibrary(GIC400_Base);
 	}
-
-   NOTE
-	As of V1.3 a failure returns one of the distinct negative GIC400_ERR_*
-	codes, as a LONG. Prior to V1.3 every failure returned -1, whatever the
-	cause, and the result was a ULONG.
 
    SEE ALSO
 	gic400.library/EnableInt(), gic400.library/SetIntPending()
@@ -489,11 +472,6 @@ gic400.library/UnrouteIntFromCpu
 	mask            The priority mask (0 to 255), or a negative
 	                GIC400_ERR_* code.
 
-   NOTE
-	As of V1.3 a failure returns one of the distinct negative GIC400_ERR_*
-	codes, as a LONG. Prior to V1.3 every failure returned -1, whatever the
-	cause, and the result was a ULONG.
-
    SEE ALSO
 	gic400.library/SetPriorityMask()
 
@@ -515,11 +493,6 @@ gic400.library/UnrouteIntFromCpu
    RESULTS
 	priority        The running priority (0 to 255), or a negative
 	                GIC400_ERR_* code.
-
-   NOTE
-	As of V1.3 a failure returns one of the distinct negative GIC400_ERR_*
-	codes, as a LONG. Prior to V1.3 every failure returned -1, whatever the
-	cause, and the result was a ULONG.
 
    SEE ALSO
 	gic400.library/GetHighestPending()
@@ -546,11 +519,6 @@ gic400.library/UnrouteIntFromCpu
 	                negative GIC400_ERR_* code (GIC400_ERR_NOT_ROUTABLE
 	                for IDs below 32, GIC400_ERR_INVALID_IRQ if out of
 	                range).
-
-   NOTE
-	As of V1.3 a failure returns one of the distinct negative GIC400_ERR_*
-	codes, as a LONG. Prior to V1.3 every failure returned -1, whatever the
-	cause, and the result was a ULONG.
 
    SEE ALSO
 	gic400.library/RouteIntToCpu(),
@@ -584,11 +552,6 @@ gic400.library/UnrouteIntFromCpu
 	                GIC400_ERR_NOT_FOUND if no server is registered,
 	                GIC400_ERR_INVALID_IRQ if irq is out of range.
 
-   NOTE
-	As of V1.3 a failure returns one of the distinct negative GIC400_ERR_*
-	codes, as a LONG. Prior to V1.3 every failure returned -1, whatever the
-	cause, and the result was a ULONG.
-
    SEE ALSO
 	gic400.library/AddIntServerEx()
 
@@ -617,11 +580,6 @@ gic400.library/UnrouteIntFromCpu
 	                PPI (below 32), GIC400_ERR_INVALID_IRQ if irq is out
 	                of range.
 
-   NOTE
-	As of V1.3 a failure returns one of the distinct negative GIC400_ERR_*
-	codes, as a LONG. Prior to V1.3 every failure returned -1, whatever the
-	cause, and the result was a ULONG.
-
    SEE ALSO
 	gic400.library/UnrouteIntFromCpu(),
 	gic400.library/QueryIntRoute()
@@ -649,11 +607,6 @@ gic400.library/UnrouteIntFromCpu
 	error           0 on success, GIC400_ERR_INVALID_IRQ if irq is out of
 	                range.
 
-   NOTE
-	As of V1.3 a failure returns one of the distinct negative GIC400_ERR_*
-	codes, as a LONG. Prior to V1.3 every failure returned -1, whatever the
-	cause, and the result was a ULONG.
-
    SEE ALSO
 	gic400.library/ClearIntActive(), gic400.library/GetIntStatus()
 
@@ -680,11 +633,6 @@ gic400.library/UnrouteIntFromCpu
    RESULTS
 	error           0 on success, GIC400_ERR_INVALID_IRQ if irq is out of
 	                range.
-
-   NOTE
-	As of V1.3 a failure returns one of the distinct negative GIC400_ERR_*
-	codes, as a LONG. Prior to V1.3 every failure returned -1, whatever the
-	cause, and the result was a ULONG.
 
    SEE ALSO
 	gic400.library/ClearIntPending(), gic400.library/GetIntStatus()
@@ -714,11 +662,6 @@ gic400.library/UnrouteIntFromCpu
    RESULTS
 	error           0 on success, GIC400_ERR_INVALID_IRQ if irq is out of
 	                range.
-
-   NOTE
-	As of V1.3 a failure returns one of the distinct negative GIC400_ERR_*
-	codes, as a LONG. Prior to V1.3 every failure returned -1, whatever the
-	cause, and the result was a ULONG.
 
    SEE ALSO
 	gic400.library/GetIntPriority(),
@@ -751,10 +694,6 @@ gic400.library/UnrouteIntFromCpu
 	The configuration of SGIs (IDs 0 to 15) is fixed: for those the
 	call does nothing and still returns 0.
 
-	As of V1.3 a failure returns one of the distinct negative GIC400_ERR_*
-	codes, as a LONG. Prior to V1.3 every failure returned -1, whatever the
-	cause, and the result was a ULONG.
-
    SEE ALSO
 	gic400.library/SetIntTriggerLevel()
 
@@ -785,10 +724,6 @@ gic400.library/UnrouteIntFromCpu
 	The configuration of SGIs (IDs 0 to 15) is fixed: for those the
 	call does nothing and still returns 0.
 
-	As of V1.3 a failure returns one of the distinct negative GIC400_ERR_*
-	codes, as a LONG. Prior to V1.3 every failure returned -1, whatever the
-	cause, and the result was a ULONG.
-
    SEE ALSO
 	gic400.library/SetIntTriggerEdge()
 
@@ -814,16 +749,11 @@ gic400.library/UnrouteIntFromCpu
 	mask            The priority mask.
 
    RESULTS
-	error           0 on success, GIC400_ERR_NOT_READY if the library is
-	                not initialised.
+	error           0 on success, or a negative GIC400_ERR_* code.
 
    NOTE
 	The mask is global: it affects every interrupt of every user of
 	the library.
-
-	As of V1.3 a failure returns one of the distinct negative GIC400_ERR_*
-	codes, as a LONG. Prior to V1.3 every failure returned -1, whatever the
-	cause, and the result was a ULONG.
 
    SEE ALSO
 	gic400.library/GetPriorityMask(),
@@ -853,11 +783,6 @@ gic400.library/UnrouteIntFromCpu
 	                or more, GIC400_ERR_NOT_ROUTABLE if irq is an SGI or
 	                PPI (below 32), GIC400_ERR_INVALID_IRQ if irq is out
 	                of range.
-
-   NOTE
-	As of V1.3 a failure returns one of the distinct negative GIC400_ERR_*
-	codes, as a LONG. Prior to V1.3 every failure returned -1, whatever the
-	cause, and the result was a ULONG.
 
    SEE ALSO
 	gic400.library/RouteIntToCpu(), gic400.library/QueryIntRoute()

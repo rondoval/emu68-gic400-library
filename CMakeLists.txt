@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14.0)
-project(gic400.library VERSION 1.9)
+project(gic400.library VERSION 1.10)
 
 # Version string
 string(TIMESTAMP CURRENT_DATE "(%d.%m.%Y)")
@@ -9,44 +9,17 @@ endif()
 set(VERSTRING "$VER: ${PROJECT_NAME} ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR} ${CURRENT_DATE}")
 string(REGEX REPLACE "\\.library$" "" LIBRARY_BASENAME "${PROJECT_NAME}")
 
-# Find SFDC tool
-find_program(SFDC_EXECUTABLE
-    NAMES sfdc
-    HINTS /opt/m68k-amigaos/bin
-    REQUIRED
-)
-
-# SFD header generation
-set(GIC400_GENERATED_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated/include)
-set(GIC400_SFD_FILE ${CMAKE_CURRENT_SOURCE_DIR}/sfd/${LIBRARY_BASENAME}.sfd)
-set(GIC400_GENERATED_FD_FILE ${CMAKE_CURRENT_BINARY_DIR}/generated/FD/${LIBRARY_BASENAME}.fd)
-set(GIC400_GENERATED_HEADERS
-    ${GIC400_GENERATED_INCLUDE_DIR}/clib/${LIBRARY_BASENAME}_protos.h
-    ${GIC400_GENERATED_INCLUDE_DIR}/inline/${LIBRARY_BASENAME}.h
-    ${GIC400_GENERATED_INCLUDE_DIR}/pragmas/${LIBRARY_BASENAME}_pragmas.h
-    ${GIC400_GENERATED_INCLUDE_DIR}/proto/${LIBRARY_BASENAME}.h
-    ${GIC400_GENERATED_FD_FILE}
-)
-
-add_custom_command(
-    OUTPUT ${GIC400_GENERATED_HEADERS}
-    COMMAND ${CMAKE_COMMAND}
-        -DSFDC_EXECUTABLE=${SFDC_EXECUTABLE}
-        -DSFD_FILE=${GIC400_SFD_FILE}
-        -DOUTPUT_DIR=${GIC400_GENERATED_INCLUDE_DIR}
-        -DOUTPUT_BASENAME=${LIBRARY_BASENAME}
-        -DOUTPUT_FD_FILE=${GIC400_GENERATED_FD_FILE}
-        -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/GenerateSfdHeaders.cmake
-    DEPENDS
-        ${GIC400_SFD_FILE}
-        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/GenerateSfdHeaders.cmake
-    VERBATIM
-)
-
-add_custom_target(gic400_sfd_headers ALL DEPENDS ${GIC400_GENERATED_HEADERS})
-
 # Dependencies
-find_package(Emu68Common CONFIG REQUIRED)
+find_package(Emu68Common 2.2 CONFIG REQUIRED) # 2.2: emu68_sfd_headers() FD_DIR
+
+# SFD -> clib/inline/pragmas/proto headers and the FD file (emu68-common's emu68_sfd_headers)
+set(GIC400_GENERATED_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated/include)
+set(GIC400_GENERATED_FD_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated/FD)
+emu68_sfd_headers(gic400_sfd_headers ALL
+    OUTPUT_DIR ${GIC400_GENERATED_INCLUDE_DIR}
+    FD_DIR ${GIC400_GENERATED_FD_DIR}
+    SFD ${CMAKE_CURRENT_SOURCE_DIR}/sfd/${LIBRARY_BASENAME}.sfd
+)
 
 # Set default install prefix to ./install subdirectory
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
@@ -152,10 +125,9 @@ install(
     DESTINATION include
 )
 
-# Install targets
-# Install the FD file and the AutoDocs, next to the SFD-derived headers
+# Install the FD file and the Autodocs (the stack's archive, Developer/)
 install(
-    FILES ${GIC400_GENERATED_FD_FILE}
+    DIRECTORY ${GIC400_GENERATED_FD_DIR}/
     DESTINATION Developer/FD
 )
 
@@ -164,6 +136,7 @@ install(
     DESTINATION Developer
 )
 
+# Install targets
 install(
     TARGETS gic400_headers gic400_library
     EXPORT GIC400Targets

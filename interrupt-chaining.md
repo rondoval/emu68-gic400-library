@@ -51,7 +51,7 @@ because it leaves the same fragile epilogue in the middle. `gic400_exec_dispatch
 `offsetof()` `"i"` operands and referenced with `%c[name]`, guarded by `#ifndef
 __INTELLISENSE__`.
 
-This has happened once. `bcmgenet_isr0` in the SANA-II genet compiled to:
+This has happened twice. The first time, `bcmgenet_isr0` in the SANA-II genet compiled to:
 
 ```
  de:  moveq  #1,d0        ; return value: Z clear, "handled"
@@ -66,6 +66,11 @@ keeps the never-zero raw IAR value in `d2` across the call. That accident is pre
 not be relied on. It is now written out in assembly, where the body turns out to need no
 callee-saved register at all (`Signal()` is the last thing it does, so nothing has to survive a
 call), which leaves a bare `rts` for an epilogue and the `moveq` reaching the caller intact.
+
+The second time it was a compiler update, not an edit: GCC 16.2.1b gave `vchiq_int_isr` in
+emu68-vchiq-library, a server that had passed until then, the same `moveq` followed by restores
+of D2 and A6. The check failed the build, and that server is now assembly of the same shape
+(`vchiq/src/irq.c`).
 
 One other server passes only *incidentally*: the legacy xhci's not-handled path leaves Z set from
 the `and.l` that computed its status mask, and its epilogue happens to be `movea`/`addq`-to-`sp`
