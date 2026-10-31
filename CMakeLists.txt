@@ -19,11 +19,13 @@ find_program(SFDC_EXECUTABLE
 # SFD header generation
 set(GIC400_GENERATED_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated/include)
 set(GIC400_SFD_FILE ${CMAKE_CURRENT_SOURCE_DIR}/sfd/${LIBRARY_BASENAME}.sfd)
+set(GIC400_GENERATED_FD_FILE ${CMAKE_CURRENT_BINARY_DIR}/generated/FD/${LIBRARY_BASENAME}.fd)
 set(GIC400_GENERATED_HEADERS
     ${GIC400_GENERATED_INCLUDE_DIR}/clib/${LIBRARY_BASENAME}_protos.h
     ${GIC400_GENERATED_INCLUDE_DIR}/inline/${LIBRARY_BASENAME}.h
     ${GIC400_GENERATED_INCLUDE_DIR}/pragmas/${LIBRARY_BASENAME}_pragmas.h
     ${GIC400_GENERATED_INCLUDE_DIR}/proto/${LIBRARY_BASENAME}.h
+    ${GIC400_GENERATED_FD_FILE}
 )
 
 add_custom_command(
@@ -33,6 +35,7 @@ add_custom_command(
         -DSFD_FILE=${GIC400_SFD_FILE}
         -DOUTPUT_DIR=${GIC400_GENERATED_INCLUDE_DIR}
         -DOUTPUT_BASENAME=${LIBRARY_BASENAME}
+        -DOUTPUT_FD_FILE=${GIC400_GENERATED_FD_FILE}
         -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/GenerateSfdHeaders.cmake
     DEPENDS
         ${GIC400_SFD_FILE}
@@ -150,6 +153,17 @@ install(
 )
 
 # Install targets
+# Install the FD file and the AutoDocs, next to the SFD-derived headers
+install(
+    FILES ${GIC400_GENERATED_FD_FILE}
+    DESTINATION Developer/FD
+)
+
+install(
+    DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/Autodocs
+    DESTINATION Developer
+)
+
 install(
     TARGETS gic400_headers gic400_library
     EXPORT GIC400Targets
