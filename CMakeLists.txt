@@ -10,12 +10,14 @@ set(VERSTRING "$VER: ${PROJECT_NAME} ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_
 string(REGEX REPLACE "\\.library$" "" LIBRARY_BASENAME "${PROJECT_NAME}")
 
 # Dependencies
-find_package(Emu68Common 2.1 CONFIG REQUIRED) # 2.1: emu68_sfd_headers()
+find_package(Emu68Common 2.2 CONFIG REQUIRED) # 2.2: emu68_sfd_headers() FD_DIR
 
-# SFD -> clib/inline/pragmas/proto headers (emu68-common's emu68_sfd_headers)
+# SFD -> clib/inline/pragmas/proto headers and the FD file (emu68-common's emu68_sfd_headers)
 set(GIC400_GENERATED_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated/include)
+set(GIC400_GENERATED_FD_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated/FD)
 emu68_sfd_headers(gic400_sfd_headers ALL
     OUTPUT_DIR ${GIC400_GENERATED_INCLUDE_DIR}
+    FD_DIR ${GIC400_GENERATED_FD_DIR}
     SFD ${CMAKE_CURRENT_SOURCE_DIR}/sfd/${LIBRARY_BASENAME}.sfd
 )
 
@@ -123,10 +125,9 @@ install(
     DESTINATION include
 )
 
-# Install targets
-# Install the FD file and the AutoDocs, next to the SFD-derived headers
+# Install the FD file and the Autodocs (the stack's archive, Developer/)
 install(
-    FILES ${GIC400_GENERATED_FD_FILE}
+    DIRECTORY ${GIC400_GENERATED_FD_DIR}/
     DESTINATION Developer/FD
 )
 
@@ -135,6 +136,7 @@ install(
     DESTINATION Developer
 )
 
+# Install targets
 install(
     TARGETS gic400_headers gic400_library
     EXPORT GIC400Targets
