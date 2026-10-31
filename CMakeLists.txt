@@ -124,6 +124,17 @@ install(
 )
 
 # Install targets
+# Install the FD file and the AutoDocs, next to the SFD-derived headers
+install(
+    FILES ${GIC400_GENERATED_FD_FILE}
+    DESTINATION Developer/FD
+)
+
+install(
+    DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/Autodocs
+    DESTINATION Developer
+)
+
 install(
     TARGETS gic400_headers gic400_library
     EXPORT GIC400Targets
